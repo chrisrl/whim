@@ -1,0 +1,13 @@
+whim_d52_starterkit_s212/project/_build/
+whim_d52_starterkit_s212/project/JLinkLog.txt
+whim_d52_starterkit_s212/project/ant_io_tx_d52_starterkit_s212.uvguix.*
+components/
+config/
+documentation/
+examples/
+external/
+external_tools/
+license.txt
+nRF5x_MDK_8_15_0_IAR_NordicLicense.msi
+nRF5x_MDK_8_15_0_Keil4_NordicLicense.msi
+svd/
