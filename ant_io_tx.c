@@ -70,7 +70,7 @@
 // Static variables and buffers.
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
 static uint8_t m_rx_input_pin_state = 0xFF;                         /**< State of received digital data, from the other node. */
-static uint8_t m_tx_input_pin_state = 0xFF;                         /**< State of digital inputs in this node, for transmission. */
+static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
 
 
 /**@brief Encode current state of buttons
@@ -84,27 +84,47 @@ static uint8_t m_tx_input_pin_state = 0xFF;                         /**< State o
  */
 static void button_state_encode(void)
 {
-    m_tx_input_pin_state = 0xFF;
-
     if (bsp_button_is_pressed(0))
     {
-        m_tx_input_pin_state &= 0xFE;
+        bsp_board_led_on(BSP_BOARD_LED_0);
+			
+        if(m_tx_input_pin_state < 255)
+					m_tx_input_pin_state++;
     }
+		else
+		{
+			bsp_board_led_off(BSP_BOARD_LED_0);
+		}
 
     if (bsp_button_is_pressed(1))
     {
-        m_tx_input_pin_state &= 0xFD;
+        bsp_board_led_on(BSP_BOARD_LED_1);
     }
+		else
+		{
+			bsp_board_led_off(BSP_BOARD_LED_1);
+		}
 
     if (bsp_button_is_pressed(2))
     {
-        m_tx_input_pin_state &= 0xFB;
+        bsp_board_led_on(BSP_BOARD_LED_2);
     }
+		else
+		{
+			bsp_board_led_off(BSP_BOARD_LED_2);
+		}
 
     if (bsp_button_is_pressed(3))
     {
-        m_tx_input_pin_state &= 0xF7;
+        bsp_board_led_on(BSP_BOARD_LED_3);
+			
+        if(m_tx_input_pin_state > 0)
+					m_tx_input_pin_state--;
     }
+		else
+		{
+			bsp_board_led_off(BSP_BOARD_LED_3);
+		}
 }
 
 
@@ -120,13 +140,13 @@ static void handle_transmit()
     button_state_encode();
 
     m_broadcast_data[0] = DIGITALIO_DATA_PID;
-    m_broadcast_data[1] = 0xFF;
+    m_broadcast_data[1] = m_tx_input_pin_state;
     m_broadcast_data[2] = 0xFF;
     m_broadcast_data[3] = 0xFF;
     m_broadcast_data[4] = 0xFF;
     m_broadcast_data[5] = 0xFF;
     m_broadcast_data[6] = 0xFF;
-    m_broadcast_data[7] = m_tx_input_pin_state;
+    m_broadcast_data[7] = 0xFF;
 
     err_code = sd_ant_broadcast_message_tx(ANT_CHANNEL_NUM,
                                            ANT_STANDARD_DATA_PAYLOAD_SIZE,
@@ -137,31 +157,6 @@ static void handle_transmit()
 
 /**@brief Turns on LEDs according to the contents of the received data page.
  */
-static void led_state_set()
-{
-    uint8_t led_state_field = ~m_rx_input_pin_state;
-
-    if (led_state_field & 1)
-        bsp_board_led_on(BSP_BOARD_LED_0);
-    else
-        bsp_board_led_off(BSP_BOARD_LED_0);
-
-    if (led_state_field & 2)
-        bsp_board_led_on(BSP_BOARD_LED_1);
-    else
-        bsp_board_led_off(BSP_BOARD_LED_1);
-
-    if (led_state_field & 4)
-        bsp_board_led_on(BSP_BOARD_LED_2);
-    else
-        bsp_board_led_off(BSP_BOARD_LED_2);
-
-    if (led_state_field & 8)
-        bsp_board_led_on(BSP_BOARD_LED_3);
-    else
-        bsp_board_led_off(BSP_BOARD_LED_3);
-}
-
 
 void ant_io_tx_setup(void)
 {
@@ -203,7 +198,6 @@ static void ant_evt_handler(ant_evt_t * p_ant_evt, void * p_context)
             {
                 // Set LEDs according to Received Digital IO Data Page
                 m_rx_input_pin_state = p_ant_evt->message.ANT_MESSAGE_aucPayload[7];
-                led_state_set();
             }
             break;
 
