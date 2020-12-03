@@ -3,7 +3,7 @@
  * Auto generated Run-Time-Environment Configuration File
  *      *** Do not modify ! ***
  *
- * Project: 'ant_io_tx_d52_starterkit_s212' 
+ * Project: 'spi_pca10040' 
  * Target:  'nrf52832_xxaa' 
  */
 
