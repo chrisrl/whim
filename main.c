@@ -37,6 +37,10 @@
  * OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  * 
  */
+ 
+/*******************************************************************************
+															GENERAL INCLUDES
+*******************************************************************************/
 #include "sdk_config.h"
 #include "nrf_drv_spi.h"
 #include "app_util_platform.h"
@@ -48,28 +52,25 @@
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "LIS2DH12.h"
 
-#define WHO_AM_I        0x0F
-#define I_AM_LIS2DH     0x33
+/*******************************************************************************
+															VARIABLES AND CONSTANTS
+*******************************************************************************/
+#define SPI_INSTANCE  0 //SPI instance index
+const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE); //SPI instance
+volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed the transfer
 
-#define SPI_INSTANCE  0 /**< SPI instance index. */
-static const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE);  /**< SPI instance. */
-static volatile bool spi_xfer_done;  /**< Flag used to indicate that SPI instance completed the transfer. */
+uint8_t m_tx_buf[10]; //Tx buffer
+uint8_t m_rx_buf[sizeof(m_tx_buf)+1]; //Rx buffer
+const uint8_t m_length = sizeof(m_tx_buf); //Transfer length
 
-//static uint8_t       who_am_i[] = {0x8F, 0x00};			/**< TX buffer. */
-//static uint8_t			 config1[] = {0x20,0x37};
-static uint8_t			 command[2];
-static uint8_t       m_tx_buf[10];						/**< TX buffer. */
-static uint8_t       m_rx_buf[sizeof(m_tx_buf)+1];			/**< RX buffer. */
-static const uint8_t m_length = sizeof(m_tx_buf);        /**< Transfer length. */
+uint8_t received = 0;
+char str[10];
 
-static uint8_t received = 0;
-static char str[10];
-
-
-
-static void vSend_Data(uint8_t data[], size_t sz);
-static uint8_t read_Data(uint8_t data[], size_t sz);
+/*******************************************************************************
+															      PROCEDURES
+*******************************************************************************/
 
 /**
  * @brief SPI user event handler.
@@ -87,82 +88,6 @@ void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
 	}
 }
 
-/**
- * @brief Function Send a command to read Id
- * This function sends a one-byte command to ACC via SPI
- * @param[in] none
- */
-static uint8_t AccWhoAmI(void)
-{
-	command[0] = 0x80|WHO_AM_I;
-	command[1] = 0xFF;
-	
-	read_Data(command,sizeof(command));
-	//vSend_Data(who_am_i,sizeof(who_am_i));
-	// Confirm we have a connection, should be I_AM_LIS2DH
-	return m_rx_buf[1];
-}
-
-static void vSend_Data(uint8_t data[], size_t sz)
-{
-	memcpy(m_tx_buf,data,sz);
-
-	//memset(rx_buf, '?', m_tx_buf);
-	spi_xfer_done = false;
-	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sz, m_rx_buf, m_length));
-	// Check for successful transfer
-	while (!spi_xfer_done)
-	{
-		__WFE();
-	}
-}
-
-static uint8_t read_Data(uint8_t data[], size_t sz)
-{
-	vSend_Data(data,sz);
-	return m_rx_buf[1];
-}
-
-static void vPower_Down(void)
-{
-	// If this function is called after power on, then the LIS2DH12
-	// will still be in boot mode, allow time for boot to complete. 
-	nrf_delay_ms(20);
-	
-	// Put device into power-down
-	command[0] = 0x20;
-	command[1] = 0x00;
-	vSend_Data(command,sizeof(command));
-	nrf_delay_ms(20);
-}
-
-
-static void vInit_LIS2DH12(void)
-{
-	
-	command[0] = 0x20;
-	command[1] = 0x37;
-	vSend_Data(command,sizeof(command));
-	command[0] = 0x21;
-	command[1] = 0x00;
-	vSend_Data(command,sizeof(command));
-	command[0] = 0x22;
-	command[1] = 0x04;
-	vSend_Data(command,sizeof(command));
-	command[0] = 0x23;
-	command[1] = 0x80|0x08|0x30;
-	//vSend_Data(command,sizeof(command));
-	command[0] = 0x24;
-	command[1] = 0x40|0x08;
-	vSend_Data(command,sizeof(command));
-	
-	
-
-	//received = m_rx_buf[1];
-	//sprintf(str,"%x",received);
-	//NRF_LOG_INFO("Config1: %s",(uint32_t)str);
-	//NRF_LOG_FLUSH();
-}
 
 int main(void)
 {
@@ -181,48 +106,22 @@ int main(void)
 	spi_config.mode     = NRF_DRV_SPI_MODE_0;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, spi_event_handler, NULL));
 	
+	ACCEL_init();
 	
-	vInit_LIS2DH12();
-	//vPower_Down();
-	
-	//received = AccWhoAmI();
-	//sprintf(str,"%x",received);
-	//NRF_LOG_INFO("I am: %s",(uint32_t)str);
-	//if(received == I_AM_LIS2DH){
-	//	bsp_board_led_on(BSP_BOARD_LED_3);
-	//}
-	//NRF_LOG_FLUSH();
-
 	while (1)
-	{
-		// Reset rx buffer and transfer done flag
-		memset(m_rx_buf, 0, m_length);
+	{	
+		memset(m_rx_buf, 0, m_length); // Reset rx buffer and transfer done flag
 		spi_xfer_done = false;
 			
-		received = AccWhoAmI();
+		received = ACCEL_read_who_am_i();
 		sprintf(str,"%x",received);
 		NRF_LOG_INFO("I am: %s",(uint32_t)str);
 		if(received == I_AM_LIS2DH){
 			bsp_board_led_invert(BSP_BOARD_LED_3);
 		}
 		NRF_LOG_FLUSH();
-		//command[0] = 0x80|0x07;
-		//command[1] = 0xFF;
-		//if(read_Data(command,sizeof(command)) & 0x44){
-		//	command[0] = 0x80|0x28;
-		//	command[1] = 0xFF;
-		//	sprintf(str,"%x",read_Data(command,sizeof(command)));
-		//	NRF_LOG_INFO("Temp: %s",(uint32_t)str);
-		//	NRF_LOG_FLUSH();
-		//}
-		//APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, m_length, m_rx_buf, m_length));
 
-		//while (!spi_xfer_done)
-		//{
-		//    __WFE();
-		//}
-
-		NRF_LOG_FLUSH();
+		NRF_LOG_FLUSH(); //****DO WE NEED THIS SECOND FLUSH??
 
 		bsp_board_led_invert(BSP_BOARD_LED_0);
 		nrf_delay_ms(200);
