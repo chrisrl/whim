@@ -339,7 +339,7 @@
               <MiscControls>--reduce_paths</MiscControls>
               <Define>BOARD_PCA10040 CONFIG_GPIO_AS_PINRESET FLOAT_ABI_HARD NRF52 NRF52832_XXAA NRF52_PAN_74 SWI_DISABLE0</Define>
               <Undefine></Undefine>
-              <IncludePath>..\..\components;..\..\components\boards;..\..\components\drivers_nrf\common;..\..\components\drivers_nrf\delay;..\..\components\drivers_nrf\gpiote;..\..\components\drivers_nrf\hal;..\..\components\drivers_nrf\nrf_soc_nosd;..\..\components\drivers_nrf\spi_master;..\..\components\drivers_nrf\uart;..\..\components\libraries\atomic;..\..\components\libraries\balloc;..\..\components\libraries\bsp;..\..\components\libraries\button;..\..\components\libraries\experimental_log;..\..\components\libraries\experimental_log\src;..\..\components\libraries\experimental_memobj;..\..\components\libraries\experimental_section_vars;..\..\components\libraries\scheduler;..\..\components\libraries\strerror;..\..\components\libraries\timer;..\..\components\libraries\util;..\..\components\toolchain;..\..\..;..\..\external\fprintf;..\..\external\segger_rtt;..\config</IncludePath>
+              <IncludePath>..\..\components;..\..\components\boards;..\..\components\drivers_nrf\common;..\..\components\drivers_nrf\delay;..\..\components\drivers_nrf\gpiote;..\..\components\drivers_nrf\hal;..\..\components\drivers_nrf\nrf_soc_nosd;..\..\components\drivers_nrf\spi_master;..\..\components\drivers_nrf\uart;..\..\components\libraries\atomic;..\..\components\libraries\balloc;..\..\components\libraries\bsp;..\..\components\libraries\button;..\..\components\libraries\experimental_log;..\..\components\libraries\experimental_log\src;..\..\components\libraries\experimental_memobj;..\..\components\libraries\experimental_section_vars;..\..\components\libraries\scheduler;..\..\components\libraries\strerror;..\..\components\libraries\timer;..\..\components\libraries\util;..\..\components\toolchain;..\..\..;..\..\external\fprintf;..\..\external\segger_rtt;..\config;..\project</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -566,6 +566,26 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Accel</GroupName>
+          <Files>
+            <File>
+              <FileName>LIS2DH12.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\LIS2DH12.c</FilePath>
+            </File>
+            <File>
+              <FileName>LIS2DH12.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\LIS2DH12.h</FilePath>
+            </File>
+            <File>
+              <FileName>LIS2DH12_registers.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\LIS2DH12_registers.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>::CMSIS</GroupName>
         </Group>
         <Group>
@@ -625,5 +645,14 @@
       </file>
     </files>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>spi_pca10040</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>
