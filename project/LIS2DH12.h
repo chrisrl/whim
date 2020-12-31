@@ -22,10 +22,14 @@ and communication with the LIS2DH12 accelerometer module
 #define POWER_DOWN      0x00
 #define DUMMY_COMMAND   0xFF
 
+
 /*******************************************************************************
 															   PROCEDURES
 *******************************************************************************/
 uint8_t ACCEL_read_who_am_i(void);
+int16_t ACCEL_read_x(void);
+int16_t ACCEL_read_y(void);
+int16_t ACCEL_read_z(void);
 void ACCEL_power_down(void);
 void ACCEL_init(void);
 

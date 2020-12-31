@@ -22,9 +22,10 @@ typedef struct {
 	uint8_t reserved1[4];
 	uint8_t OUT_TEMP_L;
 	uint8_t OUT_TEMP_H;
-	uint8_t INT_COUNTER_REG;
+	uint8_t reserved2;
 	uint8_t WHO_AM_I;
-	uint8_t reserved2[15];
+	uint8_t reserved3[14];
+	uint8_t CTRL_REG0;
 	uint8_t TEMP_CFG_REG;
 	uint8_t CTRL_REG1;
 	uint8_t CTRL_REG2;
@@ -66,8 +67,8 @@ enum {
 	STATUS_REG_AUX = offsetof(LIS2DH12_REGISTER_MAP, STATUS_REG_AUX),
 	OUT_TEMP_L = offsetof(LIS2DH12_REGISTER_MAP, OUT_TEMP_L),
 	OUT_TEMP_H = offsetof(LIS2DH12_REGISTER_MAP, OUT_TEMP_H),
-	INT_COUNTER_REG = offsetof(LIS2DH12_REGISTER_MAP, INT_COUNTER_REG),
 	WHO_AM_I = offsetof(LIS2DH12_REGISTER_MAP, WHO_AM_I),
+	CTRL_REG0 = offsetof(LIS2DH12_REGISTER_MAP, CTRL_REG0),
 	TEMP_CFG_REG = offsetof(LIS2DH12_REGISTER_MAP, TEMP_CFG_REG),
 	CTRL_REG1 = offsetof(LIS2DH12_REGISTER_MAP, CTRL_REG1),
 	CTRL_REG2 = offsetof(LIS2DH12_REGISTER_MAP, CTRL_REG2),
@@ -102,6 +103,9 @@ enum {
 	Act_THS = offsetof(LIS2DH12_REGISTER_MAP, Act_THS),
 	Act_DUR = offsetof(LIS2DH12_REGISTER_MAP, Act_DUR),
 };
+
+#define CTRL_REG0_VALID_MASK (uint8_t)(0x10)
+#define CTRL_REG0_SDO_PU_DISC (uint8_t)(1 << 7)
 
 #define CTRL_REG1_Xen		(uint8_t)(1 << 0)
 #define CTRL_REG1_Yen		(uint8_t)(1 << 1)

@@ -68,6 +68,8 @@ const uint8_t m_length = sizeof(m_tx_buf); //Transfer length
 uint8_t received = 0;
 char str[10];
 
+#define SPI_DEBUG_INFO (0)
+
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
@@ -80,11 +82,11 @@ void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
                        void *                    p_context)
 {
 	spi_xfer_done = true;
-	NRF_LOG_INFO("Transfer completed.");
+	if(SPI_DEBUG_INFO) NRF_LOG_INFO("Transfer completed.");
 	if (m_rx_buf[0] != 0)
 	{
-		NRF_LOG_INFO(" Received:");
-		NRF_LOG_HEXDUMP_INFO(m_rx_buf, strlen((const char *)m_rx_buf));
+		if(SPI_DEBUG_INFO) NRF_LOG_INFO(" Received:");
+		if(SPI_DEBUG_INFO) NRF_LOG_HEXDUMP_INFO(m_rx_buf, strlen((const char *)m_rx_buf));
 	}
 }
 
@@ -103,27 +105,30 @@ int main(void)
 	spi_config.miso_pin = SPI_MISO_PIN;
 	spi_config.mosi_pin = SPI_MOSI_PIN;
 	spi_config.sck_pin  = SPI_SCK_PIN;
-	spi_config.mode     = NRF_DRV_SPI_MODE_0;
+	spi_config.mode     = NRF_DRV_SPI_MODE_3;
 	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, spi_event_handler, NULL));
-	
+	nrf_delay_ms(100); // Long delay for SPI init
 	ACCEL_init();
-	
+	nrf_delay_ms(100);
+	received = ACCEL_read_who_am_i();
+	sprintf(str,"%x",received);
+	NRF_LOG_INFO("I am: %s",(uint32_t)str);
+	NRF_LOG_FLUSH();
+	int16_t x_data, y_data, z_data;
 	while (1)
 	{	
 		memset(m_rx_buf, 0, m_length); // Reset rx buffer and transfer done flag
 		spi_xfer_done = false;
-			
-		received = ACCEL_read_who_am_i();
-		sprintf(str,"%x",received);
-		NRF_LOG_INFO("I am: %s",(uint32_t)str);
-		if(received == I_AM_LIS2DH){
-			bsp_board_led_invert(BSP_BOARD_LED_3);
-		}
+		x_data = ACCEL_read_x();
+		y_data = ACCEL_read_y();
+		z_data = ACCEL_read_z();
+		//NRF_LOG_INFO("(%d, %d, %d)", x_data, y_data, z_data);
+		
 		NRF_LOG_FLUSH();
 
 		NRF_LOG_FLUSH(); //****DO WE NEED THIS SECOND FLUSH??
 
 		bsp_board_led_invert(BSP_BOARD_LED_0);
-		nrf_delay_ms(200);
+		nrf_delay_ms(1000);
 	}
 }
