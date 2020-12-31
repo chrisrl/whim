@@ -20,16 +20,7 @@ and communication with the LIS2DH12 accelerometer module
 *******************************************************************************/
 #define I_AM_LIS2DH     0x33
 #define POWER_DOWN      0x00
-#define READ_BIT        0x80
 #define DUMMY_COMMAND   0xFF
-
-#define CTRL_REG_1_INIT 0x37
-#define CTRL_REG_2_INIT 0x00
-#define CTRL_REG_3_INIT 0x04
-#define CTRL_REG_4_INIT 0xB8
-#define CTRL_REG_5_INIT 0x48
-
-
 
 /*******************************************************************************
 															   PROCEDURES

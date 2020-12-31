@@ -93,7 +93,7 @@ void ACCEL_power_down(void)
 	// will still be in boot mode, allow time for boot to complete. 
 	nrf_delay_ms(20);
 	
-	command[0] = CTRL_REG_1;	//Put device into power-down
+	command[0] = CTRL_REG1;	//Put device into power-down
 	command[1] = POWER_DOWN;
 	accel_send_data_spi(command,sizeof(command));
 	nrf_delay_ms(20);
@@ -107,23 +107,23 @@ void ACCEL_power_down(void)
  */
 void ACCEL_init(void)
 {
-	command[0] = CTRL_REG_1;
-	command[1] = CTRL_REG_1_INIT;
+	command[0] = CTRL_REG1;
+	command[1] = CTRL_REG1_Xen | CTRL_REG1_Yen |  CTRL_REG1_Zen | CTRL_REG1_ODR0 | CTRL_REG1_ODR1;
 	accel_send_data_spi(command,sizeof(command));
 	
-	command[0] = CTRL_REG_2;
-	command[1] = CTRL_REG_2_INIT;
+	command[0] = CTRL_REG2;
+	command[1] = 0;
 	accel_send_data_spi(command,sizeof(command));
 	
-	command[0] = CTRL_REG_3;
-	command[1] = CTRL_REG_3_INIT;
+	command[0] = CTRL_REG3;
+	command[1] = CTRL_REG3_I1_WTM;
 	accel_send_data_spi(command,sizeof(command));
 	
-	command[0] = CTRL_REG_4;
-	command[1] = CTRL_REG_4_INIT;
+	command[0] = CTRL_REG4;
+	command[1] = CTRL_REG4_BDU | CTRL_REG4_FS1 | CTRL_REG4_FS0;
 	//accel_send_data_spi(command,sizeof(command));
 	
-	command[0] = CTRL_REG_5;
-	command[1] = CTRL_REG_5_INIT;
+	command[0] = CTRL_REG5;
+	command[1] = CTRL_REG5_FIFO_EN | CTRL_REG5_LIR_INT1;
 	accel_send_data_spi(command,sizeof(command));
 }
