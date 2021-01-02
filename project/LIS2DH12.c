@@ -10,41 +10,82 @@ and communicating with the LIS2DH12 acclerometer module
 /*******************************************************************************
 															GENERAL INCLUDES
 *******************************************************************************/
+#include <string.h>
 #include "boards.h"
+#include "sdk_common.h"
+
 #include "nrf_delay.h"
 #include "nrf_drv_spi.h"
-#include <string.h>
-#include "LIS2DH12.h"
-#include "LIS2DH12_registers.h"
-
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-/*******************************************************************************
-															VARIABLES AND CONSTANTS
-*******************************************************************************/
-extern const nrf_drv_spi_t spi; //SPI instance
-extern volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed the transfer
+#include "LIS2DH12.h"
+#include "LIS2DH12_registers.h"
 
-extern uint8_t m_tx_buf[10]; //Tx buffer
-extern uint8_t m_rx_buf[sizeof(m_tx_buf)+1]; //Rx buffer
-extern const uint8_t m_length; //Transfer length
+
+/*******************************************************************************
+															TYPE DEFINITIONS
+*******************************************************************************/
+
+typedef struct {
+	uint8_t OUT_X_L;
+	uint8_t OUT_X_H;
+	uint8_t OUT_Y_L;
+	uint8_t OUT_Y_H;
+	uint8_t OUT_Z_L;
+	uint8_t OUT_Z_H;
+} AccelXYZOutDataStruct;
+
+typedef struct {
+	uint8_t CTRL_REG0;
+	uint8_t TEMP_CFG_REG;
+	uint8_t CTRL_REG1;
+	uint8_t CTRL_REG2;
+	uint8_t CTRL_REG3;
+	uint8_t CTRL_REG4;
+	uint8_t CTRL_REG5;
+	uint8_t CTRL_REG6;
+} ControlBlockStruct;
 
 typedef struct {
 	uint8_t address;
 	uint8_t value;
 } RegisterCommandStruct;
 
-static RegisterCommandStruct command = {0};
+typedef struct {
+	uint8_t start_address;
+	uint8_t *buffer;
+	uint8_t buffer_length;
+} BlockCommandStruct;
+
+
+/*******************************************************************************
+															VARIABLES AND CONSTANTS
+*******************************************************************************/
+
+/*NOTE: Uncomment these lines for more debug info*/
+//#define SPI_DEBUG_INFO
+//#define ACCEL_DEBUG_INFO
+
+#define SPI_INSTANCE  0 //SPI instance index
+const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE); //SPI instance
+volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed the transfer
+
+#define SPI_BUFFER_LENGTH (128)
+uint8_t m_tx_buf[SPI_BUFFER_LENGTH]; //Tx buffer
+uint8_t m_rx_buf[SPI_BUFFER_LENGTH]; //Rx buffer
+
+static RegisterCommandStruct reg_command = {0};
+static BlockCommandStruct block_command = {0};
 
 /*******************************************************************************
 															    PROCEDURES
 *******************************************************************************/
 
 /**
- * @brief Function sends a command to LIS2DH12
- * This function sends a one-byte command to the LIS2DH12 via SPI
+ * @brief Function sends a single byte write command to the accelerometer
+ * This function sends a one-byte write register command to the accelerometer via SPI
  * @param[in] RegisterCommandStruct* cmd
  */
 static void accel_write_register(RegisterCommandStruct* cmd)
@@ -52,7 +93,7 @@ static void accel_write_register(RegisterCommandStruct* cmd)
 	memcpy(m_tx_buf, cmd, sizeof(RegisterCommandStruct));
 
 	spi_xfer_done = false;
-	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(RegisterCommandStruct), m_rx_buf, m_length));
+	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(RegisterCommandStruct), m_rx_buf, sizeof(RegisterCommandStruct)));
 	
 	while (!spi_xfer_done) //Check for successful transfer
 	{
@@ -60,252 +101,196 @@ static void accel_write_register(RegisterCommandStruct* cmd)
 	}
 }
 
-
 /**
- * @brief Function sends a read command to LIS2DH12
- * This function sends a one-byte read command to the LIS2DH12 via SPI
- * @param[in] RegisterCommandStruct* cmd
+ * @brief Function sends a single byte read command to the accelerometer
+ * This function sends a one-byte read register command to the accelerometer via SPI
+ * @param[in] cmd: RegisterCommandStructpointer containing the desired register address
+ * @param[out] Returns the value contained in the specified register
  */
 static uint8_t accel_read_register(RegisterCommandStruct* cmd)
 {
 	cmd->address |= READ_BIT; 
+	cmd->value = 0xFF; // Insert dummy value to read during that SPI frame
+	
 	accel_write_register(cmd);
+	
 	return m_rx_buf[1];
 }
 
-
 /**
- * @brief Function sends a command to read the WHO_AM_I register
- * This function sends a one-byte read command to the LIS2DH12 WHO_AM_I register via SPI
- * @param[in] none
+ * @brief Function writes a block to a range of addresses
+ * Send a block of data to the accelerometer over SPI with the MS bit set
+ * @param[in] cmd: BlockCommandStruct pointer containing the start address, 
+ * data buffer and buffer length for the block transmission
  */
-uint8_t ACCEL_read_who_am_i(void)
+static void accel_write_block(BlockCommandStruct* cmd)
 {
-	command.address = WHO_AM_I;
-	command.value = DUMMY_COMMAND;
+	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
+	{
+		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_write_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
+		return;
+	}
+	spi_xfer_done = false;
 	
-	accel_read_register(&command);
-
-	return m_rx_buf[1]; //Confirm we have a connection, should be I_AM_LIS2DH
+	m_tx_buf[0] = cmd->start_address | MS_BIT;
+	memcpy(&m_tx_buf[1], cmd->buffer, cmd->buffer_length);
+	
+	#ifdef SPI_DEBUG_INFO
+	NRF_LOG_INFO("Writing block to 0x%02X - 0x%02X:", cmd->start_address, cmd->start_address + cmd->buffer_length-1)
+	NRF_LOG_HEXDUMP_INFO(cmd->buffer, cmd->buffer_length);
+	#endif
+	
+	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, cmd->buffer_length+1, m_rx_buf, cmd->buffer_length+1));
+	
+	while (!spi_xfer_done) //Check for successful transfer
+	{
+		__WFE();
+	}
 }
 
 /**
- * @brief Function gets X-axis data
- * This function reads the OUT_X_L and OUT_X_H registers to get the current X-axis g-force reading
- * @param[in] none
+ * @brief Function reads a block to a range of addresses
+ * Read a block of data to the accelerometer over SPI with the MS bit set
+ * @param[in] cmd: BlockCommandStruct pointer containing the start address, 
+ * receive data buffer and buffer length for the block transmission
  */
-int16_t ACCEL_read_x(void)
+static void accel_read_block(BlockCommandStruct* cmd)
 {
-	int16_t out_x;
-	uint8_t out_x_l, out_x_h; 
-	command.value = DUMMY_COMMAND;
+	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
+	{
+		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_write_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
+		return;
+	}
+	spi_xfer_done = false;
 	
-	command.address = OUT_X_L;
-	out_x_l = accel_read_register(&command);
+	m_tx_buf[0] = cmd->start_address | READ_BIT | MS_BIT;
 	
-	command.address = OUT_X_H;
-	out_x_h = accel_read_register(&command);
+	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, cmd->buffer_length+1, m_rx_buf, cmd->buffer_length+1));
 	
-	out_x = (((int16_t)out_x_h << 8) | ((int16_t)out_x_l << 0)) >> 8;
-	return out_x;
+	while (!spi_xfer_done) //Check for successful transfer
+	{
+		__WFE();
+	}
+	
+	memcpy(cmd->buffer, &m_rx_buf[1], cmd->buffer_length);
+	
+	#ifdef SPI_DEBUG_INFO
+	NRF_LOG_INFO("Read block from 0x%02X - 0x%02X:", cmd->start_address, cmd->start_address + cmd->buffer_length-1)
+	NRF_LOG_HEXDUMP_INFO(cmd->buffer, cmd->buffer_length);
+	#endif
+	
 }
 
 /**
- * @brief Function gets Y-axis data
- * This function reads the OUT_Y_L and OUT_Y_H registers to get the current Y-axis g-force reading
- * @param[in] none
+ * @brief Functions reads X Y Z data from the accelerometer
+ * Get the X Y Z OUT register values scaled to int16_t data types
+ * @param[in] data: AccelXYZDataStruct pointer to receive the x y and z values to
  */
-int16_t ACCEL_read_y(void)
+void ACCEL_read_xyz(AccelXYZDataStruct* data)
 {
-	int16_t out_y;
-	uint8_t out_y_l, out_y_h; 
-	command.value = DUMMY_COMMAND;
+	#ifdef ACCEL_DEBUG_INFO
+	NRF_LOG_INFO("Reading accel XYZ data registers...");
+	#endif
 	
-	command.address = OUT_Y_L;
-	out_y_l = accel_read_register(&command);
+	AccelXYZOutDataStruct xyz_out_registers = {0};
 	
-	command.address = OUT_Y_H;
-	out_y_h = accel_read_register(&command);
+	block_command.start_address = OUT_X_L;
+	block_command.buffer = (uint8_t*)&xyz_out_registers;
+	block_command.buffer_length = sizeof(xyz_out_registers);
 	
-	out_y = (((int16_t)out_y_h << 8) | ((int16_t)out_y_l << 0)) >> 8;
-	return out_y;
+	accel_read_block(&block_command);
+	
+	data->out_x = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> 6;
+	data->out_y = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> 6;
+	data->out_z = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> 6;
 }
 
 /**
- * @brief Function gets Z-axis data
- * This function reads the OUT_Z_L and OUT_Z_H registers to get the current Z-axis g-force reading
- * @param[in] none
+ * @brief SPI user event handler.
+ * @param event
  */
-int16_t ACCEL_read_z(void)
+void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
+                       void *                    p_context)
 {
-	int16_t out_z;
-	uint8_t out_z_l, out_z_h; 
-	command.value = DUMMY_COMMAND;
-	
-	command.address = OUT_Z_L;
-	out_z_l = accel_read_register(&command);
-	
-	command.address = OUT_Z_H;
-	out_z_h = accel_read_register(&command);
-	
-	out_z = (((int16_t)out_z_h << 8) | ((int16_t)out_z_l << 0)) >> 8;
-	return out_z;
+	spi_xfer_done = true;
 }
 
 /**
- * @brief Function sends a power down command to LIS2DH12
- * This function sends the command to power down the LIS2DH12. It delays for 20ms to ensure 
- * a successful operation.
- * @param[in] none
+ * @brief Intialize the SPI perihperal
+ * Set the MOSI, MISO, SS and SCK pins and SPI Driver Mode to 3
  */
-void ACCEL_power_down(void)
+static void spi_init(void)
 {
-	// If this function is called after power on, then the LIS2DH12
-	// will still be in boot mode, allow time for boot to complete. 
-	nrf_delay_ms(20);
+	#ifdef SPI_DEBUG_INFO
+	NRF_LOG_INFO("SPI Initializing...");
+	#endif
 	
-	command.address = CTRL_REG1;	//Put device into power-down
-	command.value = POWER_DOWN;
-	accel_write_register(&command);
-	nrf_delay_ms(20);
+	nrf_drv_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
+	spi_config.sck_pin      = SPI_SCK_PIN;
+  spi_config.mosi_pin     = SPI_MOSI_PIN;
+  spi_config.miso_pin     = SPI_MISO_PIN;
+  spi_config.ss_pin       = SPI_SS_PIN;
+  spi_config.mode         = NRF_DRV_SPI_MODE_3;
+	
+	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, spi_event_handler, NULL));
+	
+	#ifdef SPI_DEBUG_INFO
+	NRF_LOG_INFO("SPI Initialized.");
+	#endif
 }
 
-
 /**
- * @brief Function initializes the CTRL registers of the LS2DH12
+ * @brief Function initializes the accelerometer
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
  * @param[in] none
  */
-void ACCEL_init(void)
-{	
-	nrf_delay_ms(150);
-	
-	uint8_t register_value = 0;
-	
-	// Set valid mask in CTRL_REG0
-	command.address = CTRL_REG0;
-	command.value = CTRL_REG0_VALID_MASK;
-	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-	NRF_LOG_FLUSH();
-	accel_write_register(&command);
+bool ACCEL_init(void)
+{
+	// Initialize the SPI peripheral
+	spi_init();
 	nrf_delay_ms(100);
 	
+	#ifdef ACCEL_DEBUG_INFO
+	NRF_LOG_INFO("Accelerometer Initializing...");
+	#endif
 	
-	// Enable all axes and set ODR
-	command.address = CTRL_REG1;
-	command.value = CTRL_REG1_Xen | CTRL_REG1_Yen | CTRL_REG1_Zen;// | CTRL_REG1_ODR0 | CTRL_REG1_ODR1;
-	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-	NRF_LOG_FLUSH();
-	accel_write_register(&command);
-	nrf_delay_ms(100);
+	ControlBlockStruct config_block_w = {
+		CTRL_REG0_VALID_MASK,
+		0x00,
+		CTRL_REG1_Xen | CTRL_REG1_Yen | CTRL_REG1_Zen | CTRL_REG1_ODR0 | CTRL_REG1_ODR1,
+		0x00,
+		0x00,
+		CTRL_REG4_BDU | CTRL_REG4_FS0 | CTRL_REG4_FS1,
+		0x00
+	};
+	block_command.start_address = CTRL_REG0;
+	block_command.buffer = (uint8_t*)&config_block_w;
+	block_command.buffer_length = sizeof(config_block_w);
 	
-	// Clear HR in CTRL_REG4
-//	command.address = CTRL_REG4;
-//	command.value = DUMMY_COMMAND;
-//	register_value = accel_read_register(&command);
-//	// Only write to the register if HR bit is high
-//	if((register_value & CTRL_REG4_HR) == CTRL_REG4_HR)
-//	{
-//		NRF_LOG_INFO("HR bit was found to be enabled.");
-		command.address = CTRL_REG4;
-		command.value = CTRL_REG4_BDU;
-		NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-		NRF_LOG_FLUSH();
-		//accel_write_register(&command);
-		nrf_delay_ms(100);
-//	}
-//	else
-//	{
-//		NRF_LOG_INFO("HR bit was found to be disabled.");
-//		NRF_LOG_FLUSH();
-//	}
+	accel_write_block(&block_command);
 	
-//	// Clear LPen
-//	command.address = CTRL_REG1;
-//	command.value = CTRL_REG1_LPen;
-//	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-//	NRF_LOG_FLUSH();
-//	accel_write_register(&command);
-//	
-//	nrf_delay_ms(150);
+	#ifdef ACCEL_DEBUG_INFO
+	NRF_LOG_INFO("Accelerometer Initializing...");
+	#endif
 	
-//	// Enable all axes and set ODR
-//	command.address = CTRL_REG1;
-//	command.value = CTRL_REG1_Xen | CTRL_REG1_Yen | CTRL_REG1_Zen;// | CTRL_REG1_ODR0 | CTRL_REG1_ODR1;
-//	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-//	NRF_LOG_FLUSH();
-//	accel_write_register(&command);
-//	nrf_delay_ms(100);
+	ControlBlockStruct config_block_r = {0};
+	block_command.start_address = CTRL_REG0;
+	block_command.buffer = (uint8_t*)&config_block_r;
+	block_command.buffer_length = sizeof(config_block_r);
+	accel_read_block(&block_command);
 	
-	// Enable watermark interrupt for INT1
-//	command.address = CTRL_REG3;
-//	command.value = DUMMY_COMMAND;
-//	register_value = accel_read_register(&command);
-//	
-//	command.address = CTRL_REG3;
-//	command.value = register_value | CTRL_REG3_I1_WTM;
-//	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-//	NRF_LOG_FLUSH();
-//	accel_write_register(&command);
-//	nrf_delay_ms(100);
-//	
-//	// Enable +/-16g sampling
-//	command.address = CTRL_REG4;
-//	command.value = DUMMY_COMMAND;
-//	register_value = accel_read_register(&command);
-//	
-//	command.address = CTRL_REG4;
-//	command.value = register_value | CTRL_REG4_FS0 | CTRL_REG4_FS1;
-//	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-//	NRF_LOG_FLUSH();
-////	accel_write_register(&command);
-//	
-//	// Enable the FIFO
-//	command.address = CTRL_REG5;
-//	command.value = DUMMY_COMMAND;
-//	register_value = accel_read_register(&command);
-//	
-//	command.address = CTRL_REG5;
-//	command.value = register_value | CTRL_REG5_FIFO_EN;
-//	NRF_LOG_INFO("Writing 0x%02X to 0x%02X...", command.value, command.address);
-//	NRF_LOG_FLUSH();
-//	accel_write_register(&command);
-//	nrf_delay_ms(100);
-//	
-//	// Read REFERENCE
-//	command.address = REFERENCE;
-//	command.value = DUMMY_COMMAND;
-//	NRF_LOG_INFO("Reading 0x%02X...", command.address);
-//	NRF_LOG_FLUSH();		
+	if(memcmp(&config_block_r, &config_block_w, sizeof(ControlBlockStruct)) != 0)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("Accelerometer Initialization failed!");
+		#endif
+		
+		return false;
+	}
 	
-	nrf_delay_ms(1000);
-	command.value = DUMMY_COMMAND;
-	command.address = CTRL_REG0;
-	NRF_LOG_INFO("CTRL_REG1: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-	command.address = CTRL_REG1;
-	NRF_LOG_INFO("CTRL_REG1: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-	command.address = CTRL_REG2;
-	NRF_LOG_INFO("CTRL_REG2: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-	command.address = CTRL_REG3;
-	NRF_LOG_INFO("CTRL_REG3: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-	command.address = CTRL_REG4;
-	NRF_LOG_INFO("CTRL_REG4: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-	command.address = CTRL_REG5;
-	NRF_LOG_INFO("CTRL_REG5: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-	command.address = WHO_AM_I;
-	NRF_LOG_INFO("WHO_AM_I: 0x%02X", accel_read_register(&command));
-	NRF_LOG_FLUSH();
-	nrf_delay_ms(1000);
+	#ifdef ACCEL_DEBUG_INFO
+	NRF_LOG_INFO("Accelerometer Initializated.");
+	#endif
+	
+	return true;
 }

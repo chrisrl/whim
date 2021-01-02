@@ -12,29 +12,27 @@ and communication with the LIS2DH12 accelerometer module
 /*******************************************************************************
 															GENERAL INCLUDES
 *******************************************************************************/
+
 #include "boards.h"
 
 
 /*******************************************************************************
-															     MACROS
+															     TYPEDEFS
 *******************************************************************************/
-#define I_AM_LIS2DH     0x33
-#define POWER_DOWN      0x00
-#define DUMMY_COMMAND   0xFF
+
+typedef struct {
+	int16_t out_x;
+	int16_t out_y;
+	int16_t out_z;
+} AccelXYZDataStruct;
 
 
 /*******************************************************************************
 															   PROCEDURES
 *******************************************************************************/
-uint8_t ACCEL_read_who_am_i(void);
-int16_t ACCEL_read_x(void);
-int16_t ACCEL_read_y(void);
-int16_t ACCEL_read_z(void);
-void ACCEL_power_down(void);
-void ACCEL_init(void);
 
-static void accel_send_data_spi(uint8_t data[], size_t sz);
-static uint8_t accel_read_data_spi(uint8_t data[], size_t sz);
+void ACCEL_read_xyz(AccelXYZDataStruct* xyz_data);
+bool ACCEL_init(void);
 
 
 #endif /*LIS2DH12_H*/

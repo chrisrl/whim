@@ -55,40 +55,8 @@
 #include "LIS2DH12.h"
 
 /*******************************************************************************
-															VARIABLES AND CONSTANTS
-*******************************************************************************/
-#define SPI_INSTANCE  0 //SPI instance index
-const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE); //SPI instance
-volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed the transfer
-
-uint8_t m_tx_buf[10]; //Tx buffer
-uint8_t m_rx_buf[sizeof(m_tx_buf)+1]; //Rx buffer
-const uint8_t m_length = sizeof(m_tx_buf); //Transfer length
-
-uint8_t received = 0;
-char str[10];
-
-#define SPI_DEBUG_INFO (0)
-
-/*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
-
-/**
- * @brief SPI user event handler.
- * @param event
- */
-void spi_event_handler(nrf_drv_spi_evt_t const * p_event,
-                       void *                    p_context)
-{
-	spi_xfer_done = true;
-	if(SPI_DEBUG_INFO) NRF_LOG_INFO("Transfer completed.");
-	if (m_rx_buf[0] != 0)
-	{
-		if(SPI_DEBUG_INFO) NRF_LOG_INFO(" Received:");
-		if(SPI_DEBUG_INFO) NRF_LOG_HEXDUMP_INFO(m_rx_buf, strlen((const char *)m_rx_buf));
-	}
-}
 
 
 int main(void)
@@ -98,36 +66,32 @@ int main(void)
 	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
 	
-	NRF_LOG_INFO("SPI example.");
-
-	nrf_drv_spi_config_t spi_config = NRF_DRV_SPI_DEFAULT_CONFIG;
-	spi_config.ss_pin   = SPI_SS_PIN;
-	spi_config.miso_pin = SPI_MISO_PIN;
-	spi_config.mosi_pin = SPI_MOSI_PIN;
-	spi_config.sck_pin  = SPI_SCK_PIN;
-	spi_config.mode     = NRF_DRV_SPI_MODE_3;
-	APP_ERROR_CHECK(nrf_drv_spi_init(&spi, &spi_config, spi_event_handler, NULL));
-	nrf_delay_ms(100); // Long delay for SPI init
-	ACCEL_init();
-	nrf_delay_ms(100);
-	received = ACCEL_read_who_am_i();
-	sprintf(str,"%x",received);
-	NRF_LOG_INFO("I am: %s",(uint32_t)str);
+	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
-	int16_t x_data, y_data, z_data;
+	nrf_delay_ms(100);
+	
+	if(!ACCEL_init())
+	{
+		NRF_LOG_INFO("ERROR: Accelerometer Initialization failed!");
+		NRF_LOG_FLUSH();
+		nrf_delay_ms(100);
+		return 0;
+	}
+	
+	NRF_LOG_FLUSH();
+	nrf_delay_ms(100);
+	
+	AccelXYZDataStruct xyz_data = {0};
+
 	while (1)
 	{	
-		memset(m_rx_buf, 0, m_length); // Reset rx buffer and transfer done flag
-		spi_xfer_done = false;
-		x_data = ACCEL_read_x();
-		y_data = ACCEL_read_y();
-		z_data = ACCEL_read_z();
-		//NRF_LOG_INFO("(%d, %d, %d)", x_data, y_data, z_data);
-		
+		ACCEL_read_xyz(&xyz_data);
+	
+		//TODO: Find a better way to represent these numbers, potentially as negative values.
+		//NOTE: This TODO may not matter if we are looking for MAGNITUDE.
+		NRF_LOG_INFO("%d, %d, %d", xyz_data.out_x, xyz_data.out_y, xyz_data.out_z);
 		NRF_LOG_FLUSH();
-
-		NRF_LOG_FLUSH(); //****DO WE NEED THIS SECOND FLUSH??
-
+		
 		bsp_board_led_invert(BSP_BOARD_LED_0);
 		nrf_delay_ms(1000);
 	}
