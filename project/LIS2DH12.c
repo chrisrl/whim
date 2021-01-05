@@ -35,7 +35,7 @@ typedef struct {
 	uint8_t OUT_Y_H;
 	uint8_t OUT_Z_L;
 	uint8_t OUT_Z_H;
-} AccelXYZOutDataStruct;
+} accel_xyz_out_t;
 
 typedef struct {
 	uint8_t CTRL_REG0;
@@ -46,19 +46,18 @@ typedef struct {
 	uint8_t CTRL_REG4;
 	uint8_t CTRL_REG5;
 	uint8_t CTRL_REG6;
-} ControlBlockStruct;
+} control_block_t;
 
 typedef struct {
 	uint8_t address;
 	uint8_t value;
-} RegisterCommandStruct;
+} register_command_t;
 
 typedef struct {
 	uint8_t start_address;
 	uint8_t *buffer;
 	uint8_t buffer_length;
-} BlockCommandStruct;
-
+} block_command_t;
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
@@ -76,8 +75,8 @@ volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed
 uint8_t m_tx_buf[SPI_BUFFER_LENGTH]; //Tx buffer
 uint8_t m_rx_buf[SPI_BUFFER_LENGTH]; //Rx buffer
 
-static RegisterCommandStruct reg_command = {0};
-static BlockCommandStruct block_command = {0};
+static register_command_t reg_command = {0};
+static block_command_t block_command = {0};
 
 /*******************************************************************************
 															    PROCEDURES
@@ -86,14 +85,14 @@ static BlockCommandStruct block_command = {0};
 /**
  * @brief Function sends a single byte write command to the accelerometer
  * This function sends a one-byte write register command to the accelerometer via SPI
- * @param[in] RegisterCommandStruct* cmd
+ * @param[in] register_command_t* cmd
  */
-static void accel_write_register(RegisterCommandStruct* cmd)
+static void accel_write_register(register_command_t* cmd)
 {
-	memcpy(m_tx_buf, cmd, sizeof(RegisterCommandStruct));
+	memcpy(m_tx_buf, cmd, sizeof(register_command_t));
 
 	spi_xfer_done = false;
-	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(RegisterCommandStruct), m_rx_buf, sizeof(RegisterCommandStruct)));
+	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(register_command_t), m_rx_buf, sizeof(register_command_t)));
 	
 	while (!spi_xfer_done) //Check for successful transfer
 	{
@@ -104,10 +103,10 @@ static void accel_write_register(RegisterCommandStruct* cmd)
 /**
  * @brief Function sends a single byte read command to the accelerometer
  * This function sends a one-byte read register command to the accelerometer via SPI
- * @param[in] cmd: RegisterCommandStructpointer containing the desired register address
+ * @param[in] cmd: register_command_tpointer containing the desired register address
  * @param[out] Returns the value contained in the specified register
  */
-static uint8_t accel_read_register(RegisterCommandStruct* cmd)
+static uint8_t accel_read_register(register_command_t* cmd)
 {
 	cmd->address |= READ_BIT; 
 	cmd->value = 0xFF; // Insert dummy value to read during that SPI frame
@@ -120,10 +119,10 @@ static uint8_t accel_read_register(RegisterCommandStruct* cmd)
 /**
  * @brief Function writes a block to a range of addresses
  * Send a block of data to the accelerometer over SPI with the MS bit set
- * @param[in] cmd: BlockCommandStruct pointer containing the start address, 
+ * @param[in] cmd: block_command_t pointer containing the start address, 
  * data buffer and buffer length for the block transmission
  */
-static void accel_write_block(BlockCommandStruct* cmd)
+static void accel_write_block(block_command_t* cmd)
 {
 	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
 	{
@@ -151,10 +150,10 @@ static void accel_write_block(BlockCommandStruct* cmd)
 /**
  * @brief Function reads a block to a range of addresses
  * Read a block of data to the accelerometer over SPI with the MS bit set
- * @param[in] cmd: BlockCommandStruct pointer containing the start address, 
+ * @param[in] cmd: block_command_t pointer containing the start address, 
  * receive data buffer and buffer length for the block transmission
  */
-static void accel_read_block(BlockCommandStruct* cmd)
+static void accel_read_block(block_command_t* cmd)
 {
 	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
 	{
@@ -182,17 +181,18 @@ static void accel_read_block(BlockCommandStruct* cmd)
 }
 
 /**
- * @brief Functions reads X Y Z data from the accelerometer
+ * @brief Functions reads raw X Y Z data from the accelerometer
  * Get the X Y Z OUT register values scaled to int16_t data types
- * @param[in] data: AccelXYZDataStruct pointer to receive the x y and z values to
+ * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values to
+ * @param[in] accel_inst: pointer to the lis2dh12 instance variable
  */
-void ACCEL_read_xyz(AccelXYZDataStruct* data)
+void ACCEL_read_xyz(accel_xyz_raw_data_t* data, lis2dh12_instance_t* accel_inst)
 {
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Reading accel XYZ data registers...");
 	#endif
 	
-	AccelXYZOutDataStruct xyz_out_registers = {0};
+	accel_xyz_out_t xyz_out_registers = {0};
 	
 	block_command.start_address = OUT_X_L;
 	block_command.buffer = (uint8_t*)&xyz_out_registers;
@@ -200,9 +200,44 @@ void ACCEL_read_xyz(AccelXYZDataStruct* data)
 	
 	accel_read_block(&block_command);
 	
-	data->out_x = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> 6;
-	data->out_y = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> 6;
-	data->out_z = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> 6;
+	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	
+	uint16_t mask = 1 << (accel_inst->resolution - 1);
+		
+	if((x_out_temp & mask) == mask) // If x_out is (-)
+	{
+		data->out_x = -((~x_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+	}
+	else
+		data->out_x = x_out_temp;
+	
+	if((y_out_temp & mask) == mask) // If y_out is (-)
+	{
+		data->out_y = -((~y_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+	}
+	else
+		data->out_y = y_out_temp;
+	
+	if((z_out_temp & mask) == mask) // If z_out is (-)
+	{
+		data->out_z = -((~z_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+	}
+	else
+		data->out_z = z_out_temp;
+}
+
+/**
+* @brief Function interprets the raw X Y Z data from the accelerometer
+* This functions converts the raw X Y Z accelerometer data to their real floating point representations
+* @param[in] data_in: Pointer to the xyz raw data struct being interpreted
+* @param[in] data_out: Pointer to the xyz impact data struct being output
+* @param[in] accel_inst: pointer to the lis2dh12 instance variable
+*/
+void ACCEL_get_xyz_impact(accel_xyz_raw_data_t* xyz_data_in, accel_xyz_impact_data_t* xyz_data_out, lis2dh12_instance_t* accel_inst)
+{
+	//TODO Get human readable G values
 }
 
 /**
@@ -244,7 +279,7 @@ static void spi_init(void)
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
  * @param[in] none
  */
-bool ACCEL_init(void)
+bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 {
 	// Initialize the SPI peripheral
 	spi_init();
@@ -254,7 +289,7 @@ bool ACCEL_init(void)
 	NRF_LOG_INFO("Accelerometer Initializing...");
 	#endif
 	
-	ControlBlockStruct config_block_w = {
+	control_block_t config_block_w = {
 		CTRL_REG0_VALID_MASK,
 		0x00,
 		CTRL_REG1_Xen | CTRL_REG1_Yen | CTRL_REG1_Zen | CTRL_REG1_ODR0 | CTRL_REG1_ODR1,
@@ -263,6 +298,7 @@ bool ACCEL_init(void)
 		CTRL_REG4_BDU | CTRL_REG4_FS0 | CTRL_REG4_FS1,
 		0x00
 	};
+	
 	block_command.start_address = CTRL_REG0;
 	block_command.buffer = (uint8_t*)&config_block_w;
 	block_command.buffer_length = sizeof(config_block_w);
@@ -273,13 +309,13 @@ bool ACCEL_init(void)
 	NRF_LOG_INFO("Accelerometer Initializing...");
 	#endif
 	
-	ControlBlockStruct config_block_r = {0};
+	control_block_t config_block_r = {0};
 	block_command.start_address = CTRL_REG0;
 	block_command.buffer = (uint8_t*)&config_block_r;
 	block_command.buffer_length = sizeof(config_block_r);
 	accel_read_block(&block_command);
 	
-	if(memcmp(&config_block_r, &config_block_w, sizeof(ControlBlockStruct)) != 0)
+	if(memcmp(&config_block_r, &config_block_w, sizeof(control_block_t)) != 0)
 	{
 		#ifdef ACCEL_DEBUG_INFO
 		NRF_LOG_INFO("Accelerometer Initialization failed!");
@@ -287,6 +323,26 @@ bool ACCEL_init(void)
 		
 		return false;
 	}
+	
+	// Set the full scale select value in the LIS2DH12 instance
+	uint8_t scale_value = config_block_r.CTRL_REG4 & SCALE_SELECT_MASK;
+	if(scale_value == MAX_2G)
+		accel_inst->full_scale_value = SCALE_2G;
+	else if(scale_value == MAX_4G)
+		accel_inst->full_scale_value = SCALE_4G;
+	else if(scale_value == MAX_8G)
+		accel_inst->full_scale_value = SCALE_8G;
+	else
+		accel_inst->full_scale_value = SCALE_16G;
+		
+	// Set the resolution of the sampels from the X Y Z registers
+	uint8_t op_mode = ((config_block_r.CTRL_REG1 & OP_MODE_MASK) << 1) | (config_block_r.CTRL_REG4 & OP_MODE_MASK);
+	if(op_mode == LOW_POWER)
+		accel_inst->resolution = LOW_RES_BITS;
+	else if(op_mode == NORMAL)
+		accel_inst->resolution = NORMAL_RES_BITS;
+	else
+		accel_inst->resolution = HIGH_RES_BITS;
 	
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializated.");

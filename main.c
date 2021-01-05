@@ -58,11 +58,11 @@
 															      PROCEDURES
 *******************************************************************************/
 
-
 int main(void)
 {
+	lis2dh12_instance_t accel_inst = {0}; // Create an empty instance of the LIS2DH12
 	bsp_board_leds_init();
-
+	
 	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
 	
@@ -70,7 +70,7 @@ int main(void)
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
-	if(!ACCEL_init())
+	if(!ACCEL_init(&accel_inst))
 	{
 		NRF_LOG_INFO("ERROR: Accelerometer Initialization failed!");
 		NRF_LOG_FLUSH();
@@ -81,15 +81,17 @@ int main(void)
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
-	AccelXYZDataStruct xyz_data = {0};
+	accel_xyz_raw_data_t xyz_raw_data = {0};
+	accel_xyz_impact_data_t xyz_impact_data = {0};
 
 	while (1)
 	{	
-		ACCEL_read_xyz(&xyz_data);
+		ACCEL_read_xyz(&xyz_raw_data, &accel_inst);
+		ACCEL_get_xyz_impact(&xyz_raw_data, &xyz_impact_data, &accel_inst);
 	
 		//TODO: Find a better way to represent these numbers, potentially as negative values.
 		//NOTE: This TODO may not matter if we are looking for MAGNITUDE.
-		NRF_LOG_INFO("%d, %d, %d", xyz_data.out_x, xyz_data.out_y, xyz_data.out_z);
+		NRF_LOG_INFO("Raw Acceleration Data: %d, %d, %d", xyz_raw_data.out_x, xyz_raw_data.out_y, xyz_raw_data.out_z);
 		NRF_LOG_FLUSH();
 		
 		bsp_board_led_invert(BSP_BOARD_LED_0);
