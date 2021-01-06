@@ -101,6 +101,7 @@ static char disp_string[100]; // String used to display desired output data
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
+accel_xyz_data_t xyz_data = {0};
 
 /**@brief Function for the Timer and BSP initialization.
  */
@@ -138,7 +139,7 @@ int main(void)
 	
 	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
-	//nrf_delay_ms(100);
+	nrf_delay_ms(100);
 	
 	ANT_init();
 	
@@ -160,6 +161,7 @@ int main(void)
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
+
 	while (1)
 	{	
 		if(fifo_wtm_flag == 1)

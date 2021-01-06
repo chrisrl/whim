@@ -30,19 +30,20 @@ and communicating over ANT wireless protocol
 
 #include "LIS2DH12.h"
 
+extern AccelXYZDataStruct xyz_data;
+
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 
 /*NOTE: Uncomment these lines for more debug info*/
-#define ANT_DEBUG_INFO
+//#define ANT_DEBUG_INFO
 
 #define DIGITALIO_DATA_PID              1u                      /**< Page number: digital data. */
 #define APP_ANT_OBSERVER_PRIO           1                       /**< Application's ANT observer priority. You shouldn't need to modify this value. */
 
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
 static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
-static AccelXYZDataStruct xyz_data = {0};
 
 
 /*******************************************************************************
@@ -104,7 +105,7 @@ static void ant_button_state_encode(void)
  * Byte 1-6 = Reserved
  * Byte 7   = State of digital inputs
  */
-static void ant_handle_transmit(AccelXYZDataStruct* xyz_data)
+static void ant_handle_transmit()
 {
 	uint32_t err_code;
 
@@ -112,12 +113,12 @@ static void ant_handle_transmit(AccelXYZDataStruct* xyz_data)
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
 	m_broadcast_data[1] = m_tx_input_pin_state;
-	m_broadcast_data[2] = (uint8_t)((xyz_data->out_x >> 8) & 0xFF);
-	m_broadcast_data[3] = (uint8_t)(xyz_data->out_x & 0xFF);
-	m_broadcast_data[4] = (uint8_t)((xyz_data->out_y >> 8) & 0xFF);
-	m_broadcast_data[5] = (uint8_t)(xyz_data->out_y & 0xFF);
-	m_broadcast_data[6] = (uint8_t)((xyz_data->out_z >> 8) & 0xFF);
-	m_broadcast_data[7] = (uint8_t)(xyz_data->out_z & 0xFF);
+	m_broadcast_data[2] = (uint8_t)((xyz_data.out_x >> 8) & 0xFF);
+	m_broadcast_data[3] = (uint8_t)(xyz_data.out_x & 0xFF);
+	m_broadcast_data[4] = (uint8_t)((xyz_data.out_y >> 8) & 0xFF);
+	m_broadcast_data[5] = (uint8_t)(xyz_data.out_y & 0xFF);
+	m_broadcast_data[6] = (uint8_t)((xyz_data.out_z >> 8) & 0xFF);
+	m_broadcast_data[7] = (uint8_t)(xyz_data.out_z & 0xFF);
 
 	err_code = sd_ant_broadcast_message_tx(ANT_CHANNEL_NUM,
 																				 ANT_STANDARD_DATA_PAYLOAD_SIZE,
@@ -130,15 +131,21 @@ static void ant_handle_transmit(AccelXYZDataStruct* xyz_data)
  */
 static void softdevice_setup(void)
 {
-    ret_code_t err_code = nrf_sdh_enable_request();
-		NRF_LOG_INFO("%d", err_code);
-    APP_ERROR_CHECK(err_code);
+	#ifdef ANT_DEBUG_INFO
+	NRF_LOG_INFO("Softdevice Initializing...");
+	#endif
+	
+	ret_code_t err_code = nrf_sdh_enable_request();
+	APP_ERROR_CHECK(err_code);
 
-    ASSERT(nrf_sdh_is_enabled());
+	ASSERT(nrf_sdh_is_enabled());
 
-    err_code = nrf_sdh_ant_enable();
-		NRF_LOG_INFO("%d", err_code);
-    APP_ERROR_CHECK(err_code);
+	err_code = nrf_sdh_ant_enable();
+	APP_ERROR_CHECK(err_code);
+	
+	#ifdef ANT_DEBUG_INFO
+	NRF_LOG_INFO("Softdevice Initialized.");
+	#endif
 }
 
 void ANT_init(void)
@@ -160,6 +167,10 @@ void ANT_init(void)
 		.network_number    = ANT_NETWORK_NUM,
 	};
 
+	#ifdef ANT_DEBUG_INFO
+	NRF_LOG_INFO("Opening ANT channel...");
+	#endif
+	
 	// Configure channel parameters
 	err_code = ant_channel_init(&channel_config);
 	APP_ERROR_CHECK(err_code);
@@ -167,6 +178,10 @@ void ANT_init(void)
 	// Open channel.
 	err_code = sd_ant_channel_open(ANT_CHANNEL_NUM);
 	APP_ERROR_CHECK(err_code);
+	
+	#ifdef ANT_DEBUG_INFO
+	NRF_LOG_INFO("ANT channel ");
+	#endif
 }
 
 /**@brief Function for handling a ANT stack event.
@@ -176,8 +191,6 @@ void ANT_init(void)
  */
 static void ant_evt_handler(ant_evt_t * p_ant_evt, void * p_context)
 {
-	//ACCEL_read_xyz(&xyz_data);
-
 	switch (p_ant_evt->event)
 	{
 		case EVENT_RX:
@@ -187,7 +200,7 @@ static void ant_evt_handler(ant_evt_t * p_ant_evt, void * p_context)
 
 		case EVENT_TX:
 			// Transmit data on the reverse direction every channel period
-			ant_handle_transmit(&xyz_data);
+			ant_handle_transmit();
 			break;
 
 		default:
