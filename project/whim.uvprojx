@@ -401,6 +401,21 @@
           </Files>
         </Group>
         <Group>
+          <GroupName>Ant</GroupName>
+          <Files>
+            <File>
+              <FileName>ANT.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\ANT.c</FilePath>
+            </File>
+            <File>
+              <FileName>ANT.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\ANT.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
           <GroupName>Application</GroupName>
           <Files>
             <File>
@@ -412,11 +427,6 @@
               <FileName>sdk_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\config\sdk_config.h</FilePath>
-            </File>
-            <File>
-              <FileName>ant_io_tx.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\ant_io_tx.c</FilePath>
             </File>
           </Files>
         </Group>
@@ -705,5 +715,14 @@
       </file>
     </files>
   </RTE>
+
+  <LayerInfo>
+    <Layers>
+      <Layer>
+        <LayName>whim</LayName>
+        <LayPrjMark>1</LayPrjMark>
+      </Layer>
+    </Layers>
+  </LayerInfo>
 
 </Project>

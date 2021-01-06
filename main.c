@@ -48,30 +48,40 @@
  * ABOVE LIMITATIONS MAY NOT APPLY TO YOU.
  * 
  */
-/*
- * Before compiling this example for NRF52, complete the following steps:
- * - Download the S212 SoftDevice from <a href="https://www.thisisant.com/developer/components/nrf52832" target="_blank">thisisant.com</a>.
- * - Extract the downloaded zip file and copy the S212 SoftDevice headers to <tt>\<InstallFolder\>/components/softdevice/s212/headers</tt>.
- * If you are using Keil packs, copy the files into a @c headers folder in your example folder.
- * - Make sure that @ref ANT_LICENSE_KEY in @c nrf_sdm.h is uncommented.
- */
+ 
+/*******************************************************************************
+																		INCLUDES
+*******************************************************************************/
 
+// std includes
 #include <stdint.h>
+#include <string.h>
+
+// sdk config
+#include "sdk_config.h"
+
+// nrf includes
 #include "nrf.h"
-
-#include "app_error.h"
-#include "app_timer.h"
-#include "bsp.h"
-#include "boards.h"
-#include "hardfault.h"
-#include "nrf_sdh.h"
-#include "nrf_sdh_ant.h"
-#include "nrf_pwr_mgmt.h"
-#include "ant_io_tx.h"
-
+#include "nrf_delay.h"
+#include "nrf_drv_spi.h"
+#include "nrf_gpio.h"
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_pwr_mgmt.h"
+#include "nrf_sdh.h"
+#include "nrf_sdh_ant.h"
+
+// misc includes
+#include "app_error.h"
+#include "app_timer.h"
+#include "app_util_platform.h"
+#include "boards.h"
+#include "bsp.h"
+#include "hardfault.h"
+
+// whim includes
+#include "ANT.h"
 #include "LIS2DH12.h"
 
 /*******************************************************************************
@@ -116,36 +126,22 @@ static void utils_setup(void)
     APP_ERROR_CHECK(err_code);
 }
 
-/**@brief Function for ANT stack initialization.
- */
-static void softdevice_setup(void)
-{
-    ret_code_t err_code = nrf_sdh_enable_request();
-		NRF_LOG_INFO("%d", err_code);
-    APP_ERROR_CHECK(err_code);
 
-    ASSERT(nrf_sdh_is_enabled());
+/*******************************************************************************
+															      PROCEDURES
+*******************************************************************************/
 
-    err_code = nrf_sdh_ant_enable();
-		NRF_LOG_INFO("%d", err_code);
-    APP_ERROR_CHECK(err_code);
-}
 
-/**@brief Function for application main entry. Does not return.
- */
 int main(void)
 {
-	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
-	NRF_LOG_DEFAULT_BACKENDS_INIT();
-
-    utils_setup();
-    softdevice_setup();
-    ant_io_tx_setup();
-
+	utils_setup();
+	
 	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
-	nrf_delay_ms(100);
-
+	//nrf_delay_ms(100);
+	
+	ANT_init();
+	
 	if(!ACCEL_init())
 	{
 		NRF_LOG_INFO("ERROR: Accelerometer Initialization failed!");
@@ -203,3 +199,4 @@ int main(void)
 		//nrf_delay_ms(1000);
 	}
 }
+
