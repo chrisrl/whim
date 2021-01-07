@@ -19,6 +19,7 @@ and communicating with the LIS2DH12 acclerometer module
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
+#include "nrf_drv_gpiote.h"
 
 #include "LIS2DH12.h"
 #include "LIS2DH12_registers.h"
@@ -77,6 +78,9 @@ uint8_t m_rx_buf[SPI_BUFFER_LENGTH]; //Rx buffer
 
 static register_command_t reg_command = {0};
 static block_command_t block_command = {0};
+
+volatile uint8_t fifo_wtm_flag = 0;
+uint32_t read_index = 0;
 
 /*******************************************************************************
 															    PROCEDURES
@@ -181,12 +185,12 @@ static void accel_read_block(block_command_t* cmd)
 }
 
 /**
- * @brief Functions reads raw X Y Z data from the accelerometer
- * Get the X Y Z OUT register values scaled to int16_t data types
- * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values to
+ * @brief Functions reads X Y Z data from the accelerometer
+ * Get the X Y Z OUT register values and convert them to their readable floating point representations
+ * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
  * @param[in] accel_inst: pointer to the lis2dh12 instance variable
  */
-void ACCEL_read_xyz(accel_xyz_raw_data_t* data, lis2dh12_instance_t* accel_inst)
+void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
 {
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Reading accel XYZ data registers...");
@@ -208,36 +212,26 @@ void ACCEL_read_xyz(accel_xyz_raw_data_t* data, lis2dh12_instance_t* accel_inst)
 		
 	if((x_out_temp & mask) == mask) // If x_out is (-)
 	{
-		data->out_x = -((~x_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
 	}
 	else
-		data->out_x = x_out_temp;
+		data->out_x = SENSITIVITY * x_out_temp;
 	
 	if((y_out_temp & mask) == mask) // If y_out is (-)
 	{
-		data->out_y = -((~y_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
 	}
 	else
-		data->out_y = y_out_temp;
+		data->out_y = SENSITIVITY * y_out_temp;
 	
 	if((z_out_temp & mask) == mask) // If z_out is (-)
 	{
-		data->out_z = -((~z_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
 	}
 	else
-		data->out_z = z_out_temp;
-}
-
-/**
-* @brief Function interprets the raw X Y Z data from the accelerometer
-* This functions converts the raw X Y Z accelerometer data to their real floating point representations
-* @param[in] data_in: Pointer to the xyz raw data struct being interpreted
-* @param[in] data_out: Pointer to the xyz impact data struct being output
-* @param[in] accel_inst: pointer to the lis2dh12 instance variable
-*/
-void ACCEL_get_xyz_impact(accel_xyz_raw_data_t* xyz_data_in, accel_xyz_impact_data_t* xyz_data_out, lis2dh12_instance_t* accel_inst)
-{
-	//TODO Get human readable G values
+		data->out_z = SENSITIVITY * z_out_temp;
+	
+	accel_fifo_check();
 }
 
 /**
@@ -283,21 +277,23 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 {
 	// Initialize the SPI peripheral
 	spi_init();
+	accel_gpio_init(); // Not sure if we would like to throw some debug capabilities around this
 	nrf_delay_ms(100);
 	
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializing...");
 	#endif
 	
+	// Initialize the CTRL registers
 	control_block_t config_block_w = {
 		CTRL_REG0_VALID_MASK,
 		0x00,
 		CTRL_REG1_Xen | CTRL_REG1_Yen | CTRL_REG1_Zen | CTRL_REG1_ODR0 | CTRL_REG1_ODR1,
 		0x00,
-		0x00,
+		CTRL_REG3_I1_WTM,
 		CTRL_REG4_BDU | CTRL_REG4_FS0 | CTRL_REG4_FS1,
-		0x00
-	};
+		CTRL_REG5_FIFO_EN
+	};		
 	
 	block_command.start_address = CTRL_REG0;
 	block_command.buffer = (uint8_t*)&config_block_w;
@@ -308,7 +304,7 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializing...");
 	#endif
-	
+		
 	control_block_t config_block_r = {0};
 	block_command.start_address = CTRL_REG0;
 	block_command.buffer = (uint8_t*)&config_block_r;
@@ -319,6 +315,23 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 	{
 		#ifdef ACCEL_DEBUG_INFO
 		NRF_LOG_INFO("Accelerometer Initialization failed!");
+		#endif
+		
+		return false;
+	}
+	
+	// Initialize the FIFO
+	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = fifo_config_w;
+	accel_write_register(&reg_command);
+	
+	uint8_t fifo_config_r = accel_read_register(&reg_command);
+	
+	if(memcmp(&fifo_config_r, &fifo_config_w, sizeof(fifo_config_w)) != 0)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("FIFO Initialization failed!");
 		#endif
 		
 		return false;
@@ -335,7 +348,7 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 	else
 		accel_inst->full_scale_value = SCALE_16G;
 		
-	// Set the resolution of the sampels from the X Y Z registers
+	// Set the resolution of the samples from the X Y Z registers
 	uint8_t op_mode = ((config_block_r.CTRL_REG1 & OP_MODE_MASK) << 1) | (config_block_r.CTRL_REG4 & OP_MODE_MASK);
 	if(op_mode == LOW_POWER)
 		accel_inst->resolution = LOW_RES_BITS;
@@ -349,4 +362,69 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 	#endif
 	
 	return true;
+}
+
+/**
+ * @brief Function reset the FIFO
+ * This function sets the FIFO to bypass mode and then back to FIFO mode after the buffer has been emptied
+ * @param[in] none
+ */
+void accel_reset_fifo(void)
+{	
+	uint8_t fifo_config = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = fifo_config & ~(FIFO_CTRL_FM1|FIFO_CTRL_FM0); // Enable bypass mode
+	accel_write_register(&reg_command);
+	nrf_delay_ms(10);
+	
+	reg_command.value = fifo_config; // Enable FIFO mode and reset WTM value
+	accel_write_register(&reg_command);	
+}
+
+/**
+ * @brief Function checks if the FIFO is empty
+ * This function checks if the FIFO buffer is empty, it resets the FIFO if true
+ * @param[in] none
+ */
+void accel_fifo_check(void)
+{
+	reg_command.address = FIFO_SRC_REG;
+	if((accel_read_register(&reg_command) & FIFO_SRC_EMPTY) == FIFO_SRC_EMPTY)
+	{
+		fifo_wtm_flag = 0;
+		accel_reset_fifo();
+	}		
+}
+
+/**
+ * @brief Function initializes the GPIO necessary for the LIS2DH12 interrupt functionality
+ * This function sets up the INT1 pin for interrupts using the specified event handler function
+ * @param[in] none
+ */
+void accel_gpio_init(void)
+{
+	ret_code_t err_code;
+	
+	err_code = nrf_drv_gpiote_init();
+	APP_ERROR_CHECK(err_code);
+	
+	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(false);
+	
+	err_code = nrf_drv_gpiote_in_init(INT1_PIN, &in_config, accel_wtm_event_handler);
+	APP_ERROR_CHECK(err_code);
+	
+	nrf_drv_gpiote_in_event_enable(INT1_PIN, true);
+}
+
+/**
+ * @brief Event handler for INT1 watermark interrupt initializes the accelerometer
+ * This function sets a flag to begin acquiring the samples from the XYZ registers once an interrupt has occured
+ * @param[in] pin: The pin that drives the interrupt
+* @param[in] polarity: The transition polarity that causes this interrupt
+ */
+void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
+{
+	fifo_wtm_flag = 1;
+	read_index++;
 }

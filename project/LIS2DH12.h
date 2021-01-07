@@ -15,14 +15,13 @@ and communication with the LIS2DH12 accelerometer module
 
 #include "boards.h"
 #include "LIS2DH12_registers.h"
+#include "nrf_drv_gpiote.h"
 
 /*******************************************************************************
 																	  MACROS
 *******************************************************************************/
 //#define SPI_DEBUG_INFO
 //#define ACCEL_DEBUG_INFO
-
-#define get_name(var) #var
 
 #define SCALE_SELECT_MASK ((uint8_t) 0x30)
 #define SCALE_2G ((uint8_t) 2)
@@ -34,6 +33,7 @@ and communication with the LIS2DH12 accelerometer module
 #define HIGH_RES_BITS 12
 #define NORMAL_RES_BITS 10
 #define LOW_RES_BITS 8
+#define SENSITIVITY ((float) 0.048) //We can change this to make it dyanmically assigned based off of the FS bit settings/op mode
 
 #define XYZ_REG_SIZE 16
 #define MAGNITUDE_MASK 0x0FFF
@@ -43,16 +43,10 @@ and communication with the LIS2DH12 accelerometer module
 *******************************************************************************/
 
 typedef struct {
-	int16_t out_x;
-	int16_t out_y;
-	int16_t out_z;
-} accel_xyz_raw_data_t;
-
-typedef struct {
 	float out_x;
 	float out_y;
 	float out_z;
-} accel_xyz_impact_data_t;
+} accel_xyz_data_t;
 
 enum {
 	MAX_2G = 0x00,
@@ -71,9 +65,12 @@ enum {
 															   PROCEDURES
 *******************************************************************************/
 
-void ACCEL_read_xyz(accel_xyz_raw_data_t* xyz_data, lis2dh12_instance_t* accel_inst);
+void ACCEL_read_xyz(accel_xyz_data_t* xyz_data, lis2dh12_instance_t* accel_inst);
 bool ACCEL_init(lis2dh12_instance_t* accel_inst);
-void ACCEL_display_instance(lis2dh12_instance_t * accel_inst);
-void ACCEL_get_xyz_impact(accel_xyz_raw_data_t* xyz_data_in, accel_xyz_impact_data_t* xyz_data_out, lis2dh12_instance_t* accel_inst);
+void accel_gpio_init(void);
+void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity);
+void accel_fifo_check(void);
+void accel_fifo_reset(void);
+
 
 #endif /*LIS2DH12_H*/

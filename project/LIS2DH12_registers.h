@@ -161,6 +161,18 @@ enum {
 #define CTRL_REG6_I2_INT1			(uint8_t)(1 << 6)
 #define CTRL_REG6_I2_CLICKen	(uint8_t)(1 << 7)
 
+#define FIFO_CTRL_FTH0 ((uint8_t) (1 << 0))
+#define FIFO_CTRL_FTH1 ((uint8_t) (1 << 1))
+#define FIFO_CTRL_FTH2 ((uint8_t) (1 << 2))
+#define FIFO_CTRL_FTH3 ((uint8_t) (1 << 3))
+#define FIFO_CTRL_FTH4 ((uint8_t) (1 << 4))
+#define FIFO_CTRL_FM0  ((uint8_t) (1 << 6))
+#define FIFO_CTRL_FM1  ((uint8_t) (1 << 7))
+
+#define FIFO_SRC_EMPTY ((uint8_t) (1 << 5))
+
+#define INT1_PIN ((nrf_drv_gpiote_pin_t) 25)
+
 #define WRITE_BIT	(uint8_t)(0 << 7)
 #define READ_BIT	(uint8_t)(1 << 7)
 #define MS_BIT		(uint8_t)(1 << 6)
