@@ -55,6 +55,12 @@
 #include "LIS2DH12.h"
 
 /*******************************************************************************
+															VARIABLES AND CONSTANTS
+*******************************************************************************/
+extern volatile uint8_t fifo_wtm_flag;
+extern uint32_t read_index;
+
+/*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
 
@@ -81,18 +87,18 @@ int main(void)
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
-	accel_xyz_raw_data_t xyz_raw_data = {0};
-	accel_xyz_impact_data_t xyz_impact_data = {0};
-
+	accel_xyz_data_t xyz_data = {0};
+	char disp_string[100];
 	while (1)
 	{	
-		ACCEL_read_xyz(&xyz_raw_data, &accel_inst);
-		ACCEL_get_xyz_impact(&xyz_raw_data, &xyz_impact_data, &accel_inst);
+		if(fifo_wtm_flag == 1)
+		{
+			ACCEL_read_xyz(&xyz_data, &accel_inst);
+		  sprintf(disp_string, "Accelerometer Data: X = %.2f, Y = %.2f, Z = %.2f ---- Read Index = %d", xyz_data.out_x, xyz_data.out_y, xyz_data.out_z, read_index);
 	
-		//TODO: Find a better way to represent these numbers, potentially as negative values.
-		//NOTE: This TODO may not matter if we are looking for MAGNITUDE.
-		NRF_LOG_INFO("Raw Acceleration Data: %d, %d, %d", xyz_raw_data.out_x, xyz_raw_data.out_y, xyz_raw_data.out_z);
-		NRF_LOG_FLUSH();
+		  NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+		  NRF_LOG_FLUSH();
+		}
 		
 		bsp_board_led_invert(BSP_BOARD_LED_0);
 		nrf_delay_ms(1000);
