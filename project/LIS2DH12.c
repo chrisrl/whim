@@ -269,15 +269,67 @@ static void spi_init(void)
 }
 
 /**
+ * @brief Function disables the FIFO
+ * This function writes the neccessary values to registers to disable the FIFO
+ * @param[in] accel_inst: accel instance
+ */
+void ACCEL_disable_fifo(void)
+{
+	// Put the FIFO into bypass mode and clear the register
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = 0x00;
+	accel_write_register(&reg_command);	
+	
+	// Disable the FIFO
+	reg_command.address = CTRL_REG5;
+	accel_write_register(&reg_command);
+}
+
+/**
+ * @brief Function intalizes and enables the FIFO
+ * This function writes the neccessary values to the desired CTRL registers to enable the FIFO
+ * @param[in] accel_inst: accel instance
+ */
+bool ACCEL_enable_fifo(void)
+{
+	// Initialize the FIFO
+	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = fifo_config_w;
+	accel_write_register(&reg_command);
+	
+	uint8_t fifo_config_r = accel_read_register(&reg_command);
+	
+	if(memcmp(&fifo_config_r, &fifo_config_w, sizeof(fifo_config_w)) != 0)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("FIFO Initialization failed!");
+		#endif
+		
+		return false;
+	}
+	
+	return true;
+}
+
+/**
  * @brief Function initializes the accelerometer
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
- * @param[in] none
+* @param[in] accel_inst: accel instance
  */
 bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 {
 	// Initialize the SPI peripheral
 	spi_init();
+	
+	// Check device ID
+	if(!accel_probe())
+	{
+		return false;
+	}
+	
 	accel_gpio_init(); // Not sure if we would like to throw some debug capabilities around this
+	
 	nrf_delay_ms(100);
 	
 	#ifdef ACCEL_DEBUG_INFO
@@ -320,23 +372,6 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 		return false;
 	}
 	
-	// Initialize the FIFO
-	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
-	reg_command.address = FIFO_CTRL_REG;
-	reg_command.value = fifo_config_w;
-	accel_write_register(&reg_command);
-	
-	uint8_t fifo_config_r = accel_read_register(&reg_command);
-	
-	if(memcmp(&fifo_config_r, &fifo_config_w, sizeof(fifo_config_w)) != 0)
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("FIFO Initialization failed!");
-		#endif
-		
-		return false;
-	}
-	
 	// Set the full scale select value in the LIS2DH12 instance
 	uint8_t scale_value = config_block_r.CTRL_REG4 & SCALE_SELECT_MASK;
 	if(scale_value == MAX_2G)
@@ -365,24 +400,6 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 }
 
 /**
- * @brief Function reset the FIFO
- * This function sets the FIFO to bypass mode and then back to FIFO mode after the buffer has been emptied
- * @param[in] none
- */
-void accel_reset_fifo(void)
-{	
-	uint8_t fifo_config = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
-	
-	reg_command.address = FIFO_CTRL_REG;
-	reg_command.value = fifo_config & ~(FIFO_CTRL_FM1|FIFO_CTRL_FM0); // Enable bypass mode
-	accel_write_register(&reg_command);
-	nrf_delay_ms(10);
-	
-	reg_command.value = fifo_config; // Enable FIFO mode and reset WTM value
-	accel_write_register(&reg_command);	
-}
-
-/**
  * @brief Function checks if the FIFO is empty
  * This function checks if the FIFO buffer is empty, it resets the FIFO if true
  * @param[in] none
@@ -393,8 +410,26 @@ void accel_fifo_check(void)
 	if((accel_read_register(&reg_command) & FIFO_SRC_EMPTY) == FIFO_SRC_EMPTY)
 	{
 		fifo_wtm_flag = 0;
-		accel_reset_fifo();
+		accel_fifo_reset();
 	}		
+}
+
+/**
+ * @brief Function reset the FIFO
+ * This function sets the FIFO to bypass mode and then back to FIFO mode after the buffer has been emptied
+ * @param[in] none
+ */
+void accel_fifo_reset(void)
+{	
+	uint8_t fifo_config = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = fifo_config & ~(FIFO_CTRL_FM1|FIFO_CTRL_FM0); // Enable bypass mode
+	accel_write_register(&reg_command);
+	nrf_delay_ms(10);
+	
+	reg_command.value = fifo_config; // Enable FIFO mode and reset WTM value
+	accel_write_register(&reg_command);	
 }
 
 /**
@@ -415,6 +450,43 @@ void accel_gpio_init(void)
 	APP_ERROR_CHECK(err_code);
 	
 	nrf_drv_gpiote_in_event_enable(INT1_PIN, true);
+}
+
+/**
+ * @brief Function that checks the WHO_AM_I register
+ * This function reads the WHO_AM_I register to confirm the device ID of 33
+ * @param[in] none
+ */
+bool accel_probe(void)
+{
+	reg_command.address = WHO_AM_I;
+	
+	uint8_t reg_val = accel_read_register(&reg_command);
+	
+	if(reg_val != DEVICE_ID)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("Accel Probe Failed!");
+		#endif
+		
+		return false;
+	}
+	
+	return true;
+}
+
+/**
+ * @brief Function that puts the ACCEL in power-down mode
+ * This function writes to the necessary registers to put the accel into power-down mode
+ * @param[in] none
+ */
+void ACCEL_pwrdn(void)
+{
+	// Set Accel to power-down mode and disable all axes
+	reg_command.address = CTRL_REG1;
+	reg_command.value = 0x00;
+	
+	accel_write_register(&reg_command);
 }
 
 /**

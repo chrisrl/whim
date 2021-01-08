@@ -38,6 +38,8 @@ and communication with the LIS2DH12 accelerometer module
 #define XYZ_REG_SIZE 16
 #define MAGNITUDE_MASK 0x0FFF
 
+#define DEVICE_ID 33
+
 /*******************************************************************************
 															     TYPEDEFS
 *******************************************************************************/
@@ -66,8 +68,12 @@ enum {
 *******************************************************************************/
 
 void ACCEL_read_xyz(accel_xyz_data_t* xyz_data, lis2dh12_instance_t* accel_inst);
+void ACCEL_disable_fifo(void);
+bool ACCEL_enable_fifo(void);
 bool ACCEL_init(lis2dh12_instance_t* accel_inst);
 void accel_gpio_init(void);
+bool accel_probe(void);
+void ACCEL_pwrdn(void);
 void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity);
 void accel_fifo_check(void);
 void accel_fifo_reset(void);
