@@ -84,6 +84,14 @@ int main(void)
 		return 0;
 	}
 	
+	if(!ACCEL_enable_fifo())
+	{
+		NRF_LOG_INFO("ERROR: Accelerometer Enable failed!");
+		NRF_LOG_FLUSH();
+		nrf_delay_ms(100);
+		return 0;
+	}
+	
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
