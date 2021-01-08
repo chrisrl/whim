@@ -60,53 +60,49 @@ typedef struct {
 	uint8_t time_window;
 	uint8_t act_ths;
 	uint8_t act_dur;
-	
-	///////////////////////// Add any non-register struct members below this point
-	uint8_t full_scale_value;
-	uint8_t resolution;
-} lis2dh12_instance_t;
+} lis2dh12_reg_map_t;
 
-STATIC_ASSERT(sizeof(lis2dh12_instance_t) != 0x3F);
+STATIC_ASSERT(sizeof(lis2dh12_reg_map_t) != 0x3F);
 
 enum {
-	STATUS_REG_AUX = offsetof(lis2dh12_instance_t, status_reg_aux),
-	OUT_TEMP_L = offsetof(lis2dh12_instance_t, out_temp_l),
-	OUT_TEMP_H = offsetof(lis2dh12_instance_t, out_temp_h),
-	WHO_AM_I = offsetof(lis2dh12_instance_t, who_am_i),
-	CTRL_REG0 = offsetof(lis2dh12_instance_t, ctrl0),
-	TEMP_CFG_REG = offsetof(lis2dh12_instance_t, temp_cfg),
-	CTRL_REG1 = offsetof(lis2dh12_instance_t, ctrl1),
-	CTRL_REG2 = offsetof(lis2dh12_instance_t, ctrl2),
-	CTRL_REG3 = offsetof(lis2dh12_instance_t, ctrl3),
-	CTRL_REG4 = offsetof(lis2dh12_instance_t, ctrl4),
-	CTRL_REG5 = offsetof(lis2dh12_instance_t, ctrl5),
-	CTRL_REG6 = offsetof(lis2dh12_instance_t, ctrl6),
-	REFERENCE = offsetof(lis2dh12_instance_t, reference),
-	STATUS_REG2 = offsetof(lis2dh12_instance_t, status_reg2),
-	OUT_X_L = offsetof(lis2dh12_instance_t, out_x_l),
-	OUT_X_H = offsetof(lis2dh12_instance_t, out_x_h),
-	OUT_Y_L = offsetof(lis2dh12_instance_t, out_y_l),
-	OUT_Y_H = offsetof(lis2dh12_instance_t, out_y_h),
-	OUT_Z_L = offsetof(lis2dh12_instance_t, out_z_l),
-	OUT_Z_H = offsetof(lis2dh12_instance_t, out_z_h),
-	FIFO_CTRL_REG = offsetof(lis2dh12_instance_t, fifo_ctrl),
-	FIFO_SRC_REG = offsetof(lis2dh12_instance_t, fifo_src),
-	INT1_CFG = offsetof(lis2dh12_instance_t, int1_cfg),
-	INT1_SOURCE = offsetof(lis2dh12_instance_t, int1_src),
-	INT1_THS = offsetof(lis2dh12_instance_t, int1_ths),
-	INT1_DURATION = offsetof(lis2dh12_instance_t, int1_dur),
-	INT2_CFG = offsetof(lis2dh12_instance_t, int2_cfg),
-	INT2_SOURCE = offsetof(lis2dh12_instance_t, int2_src),
-	INT2_THS = offsetof(lis2dh12_instance_t, int2_ths),
-	INT2_DURATION = offsetof(lis2dh12_instance_t, int2_dur),
-	CLICK_CFG = offsetof(lis2dh12_instance_t, click_cfg),
-	CLICK_SRC = offsetof(lis2dh12_instance_t, click_src),
-	CLICK_THS = offsetof(lis2dh12_instance_t, click_ths),
-	TIME_LIMIT = offsetof(lis2dh12_instance_t, time_limit),
-	TIME_LATENCY = offsetof(lis2dh12_instance_t, time_latency),
-	TIME_WINDOW = offsetof(lis2dh12_instance_t, time_window),
-	ACT_THS = offsetof(lis2dh12_instance_t, act_ths),
-	ACT_DUR = offsetof(lis2dh12_instance_t, act_dur),
+	STATUS_REG_AUX = offsetof(lis2dh12_reg_map_t, status_reg_aux),
+	OUT_TEMP_L = offsetof(lis2dh12_reg_map_t, out_temp_l),
+	OUT_TEMP_H = offsetof(lis2dh12_reg_map_t, out_temp_h),
+	WHO_AM_I = offsetof(lis2dh12_reg_map_t, who_am_i),
+	CTRL_REG0 = offsetof(lis2dh12_reg_map_t, ctrl0),
+	TEMP_CFG_REG = offsetof(lis2dh12_reg_map_t, temp_cfg),
+	CTRL_REG1 = offsetof(lis2dh12_reg_map_t, ctrl1),
+	CTRL_REG2 = offsetof(lis2dh12_reg_map_t, ctrl2),
+	CTRL_REG3 = offsetof(lis2dh12_reg_map_t, ctrl3),
+	CTRL_REG4 = offsetof(lis2dh12_reg_map_t, ctrl4),
+	CTRL_REG5 = offsetof(lis2dh12_reg_map_t, ctrl5),
+	CTRL_REG6 = offsetof(lis2dh12_reg_map_t, ctrl6),
+	REFERENCE = offsetof(lis2dh12_reg_map_t, reference),
+	STATUS_REG2 = offsetof(lis2dh12_reg_map_t, status_reg2),
+	OUT_X_L = offsetof(lis2dh12_reg_map_t, out_x_l),
+	OUT_X_H = offsetof(lis2dh12_reg_map_t, out_x_h),
+	OUT_Y_L = offsetof(lis2dh12_reg_map_t, out_y_l),
+	OUT_Y_H = offsetof(lis2dh12_reg_map_t, out_y_h),
+	OUT_Z_L = offsetof(lis2dh12_reg_map_t, out_z_l),
+	OUT_Z_H = offsetof(lis2dh12_reg_map_t, out_z_h),
+	FIFO_CTRL_REG = offsetof(lis2dh12_reg_map_t, fifo_ctrl),
+	FIFO_SRC_REG = offsetof(lis2dh12_reg_map_t, fifo_src),
+	INT1_CFG = offsetof(lis2dh12_reg_map_t, int1_cfg),
+	INT1_SOURCE = offsetof(lis2dh12_reg_map_t, int1_src),
+	INT1_THS = offsetof(lis2dh12_reg_map_t, int1_ths),
+	INT1_DURATION = offsetof(lis2dh12_reg_map_t, int1_dur),
+	INT2_CFG = offsetof(lis2dh12_reg_map_t, int2_cfg),
+	INT2_SOURCE = offsetof(lis2dh12_reg_map_t, int2_src),
+	INT2_THS = offsetof(lis2dh12_reg_map_t, int2_ths),
+	INT2_DURATION = offsetof(lis2dh12_reg_map_t, int2_dur),
+	CLICK_CFG = offsetof(lis2dh12_reg_map_t, click_cfg),
+	CLICK_SRC = offsetof(lis2dh12_reg_map_t, click_src),
+	CLICK_THS = offsetof(lis2dh12_reg_map_t, click_ths),
+	TIME_LIMIT = offsetof(lis2dh12_reg_map_t, time_limit),
+	TIME_LATENCY = offsetof(lis2dh12_reg_map_t, time_latency),
+	TIME_WINDOW = offsetof(lis2dh12_reg_map_t, time_window),
+	ACT_THS = offsetof(lis2dh12_reg_map_t, act_ths),
+	ACT_DUR = offsetof(lis2dh12_reg_map_t, act_dur),
 };
 
 #define CTRL_REG0_VALID_MASK (uint8_t)(0x10)

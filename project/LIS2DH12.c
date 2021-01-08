@@ -185,53 +185,92 @@ static void accel_read_block(block_command_t* cmd)
 }
 
 /**
- * @brief Functions reads X Y Z data from the accelerometer
- * Get the X Y Z OUT register values and convert them to their readable floating point representations
- * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
- * @param[in] accel_inst: pointer to the lis2dh12 instance variable
+ * @brief Function reset the FIFO
+ * This function sets the FIFO to bypass mode and then back to FIFO mode after the buffer has been emptied
+ * @param[in] none
  */
-void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
+static void accel_fifo_reset(void)
+{	
+	uint8_t fifo_config = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = fifo_config & ~(FIFO_CTRL_FM1|FIFO_CTRL_FM0); // Enable bypass mode
+	accel_write_register(&reg_command);
+	nrf_delay_ms(10);
+	
+	reg_command.value = fifo_config; // Enable FIFO mode and reset WTM value
+	accel_write_register(&reg_command);	
+}
+
+/**
+ * @brief Function checks if the FIFO is empty
+ * This function checks if the FIFO buffer is empty, it resets the FIFO if true
+ * @param[in] none
+ */
+static bool accel_fifo_check(void)
 {
-	#ifdef ACCEL_DEBUG_INFO
-	NRF_LOG_INFO("Reading accel XYZ data registers...");
-	#endif
+	reg_command.address = FIFO_SRC_REG;
+	if((accel_read_register(&reg_command) & FIFO_SRC_EMPTY) == FIFO_SRC_EMPTY)
+	{
+		fifo_wtm_flag = 0;
+		return true;
+	}
+	return false;
+}
+
+/**
+ * @brief Event handler for INT1 watermark interrupt initializes the accelerometer
+ * This function sets a flag to begin acquiring the samples from the XYZ registers once an interrupt has occured
+ * @param[in] pin: The pin that drives the interrupt
+* @param[in] polarity: The transition polarity that causes this interrupt
+ */
+void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
+{
+	fifo_wtm_flag = 1;
+	read_index++;
+}
+
+/**
+ * @brief Function initializes the GPIO necessary for the LIS2DH12 interrupt functionality
+ * This function sets up the INT1 pin for interrupts using the specified event handler function
+ * @param[in] none
+ */
+static void accel_pin_int_init(void)
+{
+	ret_code_t err_code;
 	
-	accel_xyz_out_t xyz_out_registers = {0};
+	err_code = nrf_drv_gpiote_init();
+	APP_ERROR_CHECK(err_code);
 	
-	block_command.start_address = OUT_X_L;
-	block_command.buffer = (uint8_t*)&xyz_out_registers;
-	block_command.buffer_length = sizeof(xyz_out_registers);
+	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(false);
 	
-	accel_read_block(&block_command);
+	err_code = nrf_drv_gpiote_in_init(INT1_PIN, &in_config, accel_wtm_event_handler);
+	APP_ERROR_CHECK(err_code);
 	
-	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
-	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
-	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	nrf_drv_gpiote_in_event_enable(INT1_PIN, true);
+}
+
+/**
+ * @brief Function that checks the WHO_AM_I register
+ * This function reads the WHO_AM_I register to confirm the device ID of 33
+ * @param[in] none
+ */
+static bool accel_probe(void)
+{
+	reg_command.address = WHO_AM_I;
 	
-	uint16_t mask = 1 << (accel_inst->resolution - 1);
+	uint8_t reg_val = accel_read_register(&reg_command);
+	
+	if(reg_val != LIS2DH12_DEVICE_ID)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("Accel Probe Failed!");
+		#endif
 		
-	if((x_out_temp & mask) == mask) // If x_out is (-)
-	{
-		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+		return false;
 	}
-	else
-		data->out_x = SENSITIVITY * x_out_temp;
 	
-	if((y_out_temp & mask) == mask) // If y_out is (-)
-	{
-		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
-	}
-	else
-		data->out_y = SENSITIVITY * y_out_temp;
-	
-	if((z_out_temp & mask) == mask) // If z_out is (-)
-	{
-		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
-	}
-	else
-		data->out_z = SENSITIVITY * z_out_temp;
-	
-	accel_fifo_check();
+	return true;
 }
 
 /**
@@ -269,15 +308,143 @@ static void spi_init(void)
 }
 
 /**
+ * @brief Functions reads X Y Z data from the accelerometer
+ * Get the X Y Z OUT register values and convert them to their readable floating point representations
+ * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
+ * @param[in] accel_inst: pointer to the lis2dh12 instance variable
+ */
+void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
+{
+	#ifdef ACCEL_DEBUG_INFO
+	NRF_LOG_INFO("Reading accel XYZ data registers...");
+	#endif
+	
+	accel_xyz_out_t xyz_out_registers = {0};
+	
+	block_command.start_address = OUT_X_L;
+	block_command.buffer = (uint8_t*)&xyz_out_registers;
+	block_command.buffer_length = sizeof(xyz_out_registers);
+	
+	accel_read_block(&block_command);
+	
+	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> (XYZ_REG_SIZE - accel_inst->resolution);
+	
+	uint16_t negative_bit_mask = 1 << (accel_inst->resolution - 1);
+		
+	if((x_out_temp & negative_bit_mask) == negative_bit_mask) // If x_out is (-)
+	{
+		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+	}
+	else
+	{
+		data->out_x = SENSITIVITY * x_out_temp;
+	}
+	
+	if((y_out_temp & negative_bit_mask) == negative_bit_mask) // If y_out is (-)
+	{
+		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+	}
+	else
+	{
+		data->out_y = SENSITIVITY * y_out_temp;
+	}
+	
+	if((z_out_temp & negative_bit_mask) == negative_bit_mask) // If z_out is (-)
+	{
+		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & (MAGNITUDE_MASK >> (HIGH_RES_BITS - accel_inst->resolution)));
+	}
+	else
+	{
+		data->out_z = SENSITIVITY * z_out_temp;
+	}
+	
+	if(accel_fifo_check())
+	{
+		accel_fifo_reset();
+	}
+}
+
+/**
+ * @brief Function disables the FIFO
+ * This function writes the neccessary values to registers to disable the FIFO
+ * @param[in] accel_inst: accel instance
+ */
+void ACCEL_disable_fifo(void)
+{
+	// Put the FIFO into bypass mode and clear the register
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = 0x00;
+	accel_write_register(&reg_command);	
+	
+	// Disable the FIFO
+	reg_command.address = CTRL_REG5;
+	accel_write_register(&reg_command);
+}
+
+/**
+ * @brief Function intalizes and enables the FIFO
+ * This function writes the neccessary values to the desired CTRL registers to enable the FIFO
+ * @param[in] accel_inst: accel instance
+ */
+bool ACCEL_enable_fifo(void)
+{
+	// Initialize the FIFO
+	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	reg_command.address = FIFO_CTRL_REG;
+	reg_command.value = fifo_config_w;
+	accel_write_register(&reg_command);
+	
+	uint8_t fifo_config_r = accel_read_register(&reg_command);
+	
+	if(fifo_config_w != fifo_config_r)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("FIFO Initialization failed!");
+		#endif
+		
+		return false;
+	}
+	
+	// Enable the FIFO
+	fifo_config_w = CTRL_REG5_FIFO_EN;
+	reg_command.address = CTRL_REG5;
+	reg_command.value = fifo_config_w;
+	accel_write_register(&reg_command);
+	
+	fifo_config_r = accel_read_register(&reg_command);
+	
+	if(fifo_config_w != fifo_config_r)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("FIFO Enable failed!");
+		#endif
+		
+		return false;
+	}
+	
+	return true;
+}
+
+/**
  * @brief Function initializes the accelerometer
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
- * @param[in] none
+* @param[in] accel_inst: accel instance
  */
 bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 {
 	// Initialize the SPI peripheral
 	spi_init();
-	accel_gpio_init(); // Not sure if we would like to throw some debug capabilities around this
+	
+	// Check device ID
+	if(!accel_probe())
+	{
+		return false;
+	}
+	
+	accel_pin_int_init(); // Not sure if we would like to throw some debug capabilities around this
+	
 	nrf_delay_ms(100);
 	
 	#ifdef ACCEL_DEBUG_INFO
@@ -292,7 +459,6 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 		0x00,
 		CTRL_REG3_I1_WTM,
 		CTRL_REG4_BDU | CTRL_REG4_FS0 | CTRL_REG4_FS1,
-		CTRL_REG5_FIFO_EN
 	};		
 	
 	block_command.start_address = CTRL_REG0;
@@ -315,23 +481,6 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 	{
 		#ifdef ACCEL_DEBUG_INFO
 		NRF_LOG_INFO("Accelerometer Initialization failed!");
-		#endif
-		
-		return false;
-	}
-	
-	// Initialize the FIFO
-	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
-	reg_command.address = FIFO_CTRL_REG;
-	reg_command.value = fifo_config_w;
-	accel_write_register(&reg_command);
-	
-	uint8_t fifo_config_r = accel_read_register(&reg_command);
-	
-	if(memcmp(&fifo_config_r, &fifo_config_w, sizeof(fifo_config_w)) != 0)
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("FIFO Initialization failed!");
 		#endif
 		
 		return false;
@@ -365,66 +514,15 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 }
 
 /**
- * @brief Function reset the FIFO
- * This function sets the FIFO to bypass mode and then back to FIFO mode after the buffer has been emptied
+ * @brief Function that puts the ACCEL in power-down mode
+ * This function writes to the necessary registers to put the accel into power-down mode
  * @param[in] none
  */
-void accel_reset_fifo(void)
-{	
-	uint8_t fifo_config = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+void ACCEL_pwrdn(void)
+{
+	// Set Accel to power-down mode and disable all axes
+	reg_command.address = CTRL_REG1;
+	reg_command.value = 0x00;
 	
-	reg_command.address = FIFO_CTRL_REG;
-	reg_command.value = fifo_config & ~(FIFO_CTRL_FM1|FIFO_CTRL_FM0); // Enable bypass mode
 	accel_write_register(&reg_command);
-	nrf_delay_ms(10);
-	
-	reg_command.value = fifo_config; // Enable FIFO mode and reset WTM value
-	accel_write_register(&reg_command);	
-}
-
-/**
- * @brief Function checks if the FIFO is empty
- * This function checks if the FIFO buffer is empty, it resets the FIFO if true
- * @param[in] none
- */
-void accel_fifo_check(void)
-{
-	reg_command.address = FIFO_SRC_REG;
-	if((accel_read_register(&reg_command) & FIFO_SRC_EMPTY) == FIFO_SRC_EMPTY)
-	{
-		fifo_wtm_flag = 0;
-		accel_reset_fifo();
-	}		
-}
-
-/**
- * @brief Function initializes the GPIO necessary for the LIS2DH12 interrupt functionality
- * This function sets up the INT1 pin for interrupts using the specified event handler function
- * @param[in] none
- */
-void accel_gpio_init(void)
-{
-	ret_code_t err_code;
-	
-	err_code = nrf_drv_gpiote_init();
-	APP_ERROR_CHECK(err_code);
-	
-	nrf_drv_gpiote_in_config_t in_config = GPIOTE_CONFIG_IN_SENSE_LOTOHI(false);
-	
-	err_code = nrf_drv_gpiote_in_init(INT1_PIN, &in_config, accel_wtm_event_handler);
-	APP_ERROR_CHECK(err_code);
-	
-	nrf_drv_gpiote_in_event_enable(INT1_PIN, true);
-}
-
-/**
- * @brief Event handler for INT1 watermark interrupt initializes the accelerometer
- * This function sets a flag to begin acquiring the samples from the XYZ registers once an interrupt has occured
- * @param[in] pin: The pin that drives the interrupt
-* @param[in] polarity: The transition polarity that causes this interrupt
- */
-void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
-{
-	fifo_wtm_flag = 1;
-	read_index++;
 }
