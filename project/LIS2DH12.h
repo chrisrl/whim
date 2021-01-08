@@ -84,5 +84,4 @@ bool ACCEL_enable_fifo(void);
 bool ACCEL_init(lis2dh12_instance_t* accel_inst);
 void ACCEL_pwrdn(void);
 
-
 #endif /*LIS2DH12_H*/
