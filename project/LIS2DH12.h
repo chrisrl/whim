@@ -39,6 +39,7 @@ and communication with the LIS2DH12 accelerometer module
 #define XYZ_FULL_DATA_SIZE (16) 
 
 #define ACCEL_FIFO_LENGTH (32)
+#define BYTES_PER_DATA_SAMPLE (6)
 /*******************************************************************************
 															     TYPEDEFS
 *******************************************************************************/

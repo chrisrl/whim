@@ -69,9 +69,9 @@ lis2dh12_instance_t accel_inst = {0}; // Instance of the LIS2DH12
 const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE); //SPI instance
 volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed the transfer
 
-#define SPI_BUFFER_LENGTH (192)
+#define SPI_BUFFER_LENGTH (256)
 uint8_t m_tx_buf[SPI_BUFFER_LENGTH]; //Tx buffer
-uint8_t m_rx_buf[SPI_BUFFER_LENGTH + 1]; //Rx buffer
+uint8_t m_rx_buf[SPI_BUFFER_LENGTH]; //Rx buffer
 
 static register_command_t reg_command = {0};
 static block_command_t block_command = {0};
@@ -158,7 +158,7 @@ static void accel_read_block(block_command_t* cmd)
 {
 	if(cmd->buffer_length > SPI_BUFFER_LENGTH)
 	{
-		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_write_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
+		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_read_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
 		return;
 	}
 	spi_xfer_done = false;
@@ -413,7 +413,7 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 
 	block_command.start_address = OUT_X_L;
 	block_command.buffer = (uint8_t*)xyz_out_fifo;
-	block_command.buffer_length = SPI_BUFFER_LENGTH;
+	block_command.buffer_length = ACCEL_FIFO_LENGTH*BYTES_PER_DATA_SAMPLE;
 
 	accel_read_block(&block_command);
 
