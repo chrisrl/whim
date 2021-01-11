@@ -68,14 +68,14 @@ int main(void)
 {
 	lis2dh12_instance_t accel_inst = {0}; // Create an empty instance of the LIS2DH12
 	bsp_board_leds_init();
-	
+
 	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
 	NRF_LOG_DEFAULT_BACKENDS_INIT();
-	
+
 	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
-	
+
 	if(!ACCEL_init(&accel_inst))
 	{
 		NRF_LOG_INFO("ERROR: Accelerometer Initialization failed!");
@@ -83,18 +83,18 @@ int main(void)
 		nrf_delay_ms(100);
 		return 0;
 	}
-	
-	if(!ACCEL_enable_fifo())
+
+	if(!ACCEL_fifo_init())
 	{
-		NRF_LOG_INFO("ERROR: Accelerometer Enable failed!");
+		NRF_LOG_INFO("ERROR: FIFO Initialization failed!");
 		NRF_LOG_FLUSH();
 		nrf_delay_ms(100);
 		return 0;
 	}
-	
+
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
-	
+
 	accel_xyz_data_t xyz_data = {0};
 	char disp_string[100];
 	while (1)

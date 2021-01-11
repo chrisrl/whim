@@ -105,13 +105,15 @@ enum {
 	ACT_DUR = offsetof(lis2dh12_reg_map_t, act_dur),
 };
 
+#define LIS2DH12_WHO_AM_I 0x33 // LIS2DH12 WHO_AM_I register value. This acts as a LIS2DH12 specific device ID.
+
 #define CTRL_REG0_VALID_MASK (uint8_t)(0x10)
 #define CTRL_REG0_SDO_PU_DISC (uint8_t)(1 << 7)
 
-#define CTRL_REG1_Xen		(uint8_t)(1 << 0)
-#define CTRL_REG1_Yen		(uint8_t)(1 << 1)
-#define CTRL_REG1_Zen		(uint8_t)(1 << 2)
-#define CTRL_REG1_LPen	(uint8_t)(1 << 3)
+#define CTRL_REG1_X_EN		(uint8_t)(1 << 0)
+#define CTRL_REG1_Y_EN		(uint8_t)(1 << 1)
+#define CTRL_REG1_Z_EN  	(uint8_t)(1 << 2)
+#define CTRL_REG1_LPEN	(uint8_t)(1 << 3)
 #define CTRL_REG1_ODR0	(uint8_t)(1 << 4)
 #define CTRL_REG1_ODR1	(uint8_t)(1 << 5)
 #define CTRL_REG1_ODR2	(uint8_t)(1 << 6)
