@@ -63,6 +63,7 @@ typedef struct {
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
+lis2dh12_instance_t accel_inst = {0}; // Instance of the LIS2DH12
 
 #define SPI_INSTANCE  0 //SPI instance index
 const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE); //SPI instance
@@ -70,7 +71,7 @@ volatile bool spi_xfer_done; //Flag used to indicate that SPI instance completed
 
 #define SPI_BUFFER_LENGTH (192)
 uint8_t m_tx_buf[SPI_BUFFER_LENGTH]; //Tx buffer
-uint8_t m_rx_buf[SPI_BUFFER_LENGTH]; //Rx buffer
+uint8_t m_rx_buf[SPI_BUFFER_LENGTH + 1]; //Rx buffer
 
 static register_command_t reg_command = {0};
 static block_command_t block_command = {0};
@@ -155,7 +156,7 @@ static void accel_write_block(block_command_t* cmd)
  */
 static void accel_read_block(block_command_t* cmd)
 {
-	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
+	if(cmd->buffer_length > SPI_BUFFER_LENGTH)
 	{
 		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_write_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
 		return;
@@ -177,7 +178,6 @@ static void accel_read_block(block_command_t* cmd)
 	NRF_LOG_INFO("Read block from 0x%02X - 0x%02X:", cmd->start_address, cmd->start_address + cmd->buffer_length-1)
 	NRF_LOG_HEXDUMP_INFO(cmd->buffer, cmd->buffer_length);
 	#endif
-	
 }
 
 /**
@@ -254,7 +254,7 @@ static void accel_fifo_set_fifo_mode(void) // Optional: this could return bool f
  * @param[in] pin: The pin that drives the interrupt
 * @param[in] polarity: The transition polarity that causes this interrupt
  */
-void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
+static void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
 {
 	fifo_wtm_flag = 1;
 	read_index++;
@@ -343,7 +343,7 @@ static void spi_init(void)
  * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
  * @param[in] accel_inst: pointer to the lis2dh12 instance variable
  */
-void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
+void ACCEL_read_xyz(accel_xyz_data_t* data)
 {
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Reading accel XYZ data registers...");
@@ -357,15 +357,15 @@ void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
 	
 	accel_read_block(&block_command);
 	
-	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst->resolution);
-	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst->resolution);
-	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst->resolution);
+	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
+	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
+	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
 	
-	uint16_t negative_bit_mask = 1 << (accel_inst->resolution - 1);
+	uint16_t negative_bit_mask = 1 << (accel_inst.resolution - 1);
 		
 	if((x_out_temp & negative_bit_mask) == negative_bit_mask) // If x_out is (-)
 	{
-		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst->resolution) - 1));
+		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
 	}
 	else
 	{
@@ -374,7 +374,7 @@ void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
 	
 	if((y_out_temp & negative_bit_mask) == negative_bit_mask) // If y_out is (-)
 	{
-		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst->resolution) - 1));
+		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
 	}
 	else
 	{
@@ -383,7 +383,7 @@ void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
 	
 	if((z_out_temp & negative_bit_mask) == negative_bit_mask) // If z_out is (-)
 	{
-		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst->resolution) - 1));
+		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
 	}
 	else
 	{
@@ -403,7 +403,7 @@ void ACCEL_read_xyz(accel_xyz_data_t* data, lis2dh12_instance_t* accel_inst)
  * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
  * @param[in] accel_inst: pointer to the lis2dh12 instance variable
  */
-void ACCEL_read_xyz_fifo(accel_xyz_data_t data[], lis2dh12_instance_t* accel_inst, uint16_t length)
+void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 {
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Reading accel XYZ block data...");
@@ -423,29 +423,29 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[], lis2dh12_instance_t* accel_ins
 
 	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
 	{
-		x_out_temp = (((int16_t)xyz_out_fifo[i].OUT_X_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_X_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst->resolution);
-		y_out_temp = (((int16_t)xyz_out_fifo[i].OUT_Y_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_Y_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst->resolution);
-		z_out_temp = (((int16_t)xyz_out_fifo[i].OUT_Z_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_Z_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst->resolution);
+		x_out_temp = (((int16_t)xyz_out_fifo[i].OUT_X_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_X_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
+		y_out_temp = (((int16_t)xyz_out_fifo[i].OUT_Y_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_Y_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
+		z_out_temp = (((int16_t)xyz_out_fifo[i].OUT_Z_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_Z_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
 		
-		uint16_t mask = 1 << (accel_inst->resolution - 1);
+		uint16_t mask = 1 << (accel_inst.resolution - 1);
 			
 		if((x_out_temp & mask) == mask) // If x_out is (-)
 		{
-			data[i].out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst->resolution) - 1));
+			data[i].out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
 		}
 		else
 			data[i].out_x = SENSITIVITY * x_out_temp;
 		
 		if((y_out_temp & mask) == mask) // If y_out is (-)
 		{
-			data[i].out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst->resolution) - 1));
+			data[i].out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
 		}
 		else
 			data[i].out_y = SENSITIVITY * y_out_temp;
 		
 		if((z_out_temp & mask) == mask) // If z_out is (-)
 		{
-			data[i].out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst->resolution) - 1));
+			data[i].out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
 		}
 		else
 			data[i].out_z = SENSITIVITY * z_out_temp;
@@ -459,13 +459,14 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[], lis2dh12_instance_t* accel_ins
 }
 
 /**
- * @brief Function intalizes and enables the FIFO
+ * @brief Function initializes and enables the FIFO
  * This function writes the neccessary values to the desired CTRL registers to initialize the FIFO
  * @param[in] none
  */
 bool ACCEL_fifo_init(void)
 {
 	accel_fifo_set_bypass_mode(); // Set bypass mode to clear fifo buffer of any existing samples
+	nrf_delay_ms(10);
 
 	// Initialize the FIFO
 	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
@@ -483,6 +484,7 @@ bool ACCEL_fifo_init(void)
 
 		return false;
 	}	
+	
 	return true;
 }
 
@@ -491,7 +493,7 @@ bool ACCEL_fifo_init(void)
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
 * @param[in] accel_inst: accel instance
  */
-bool ACCEL_init(lis2dh12_instance_t* accel_inst)
+bool ACCEL_init(void)
 {
 	// Initialize the SPI peripheral
 	spi_init();
@@ -548,11 +550,11 @@ bool ACCEL_init(lis2dh12_instance_t* accel_inst)
 	// Set the resolution of the samples from the X Y Z registers
 	uint8_t op_mode = ((config_block_r.CTRL_REG1 & CTRL_REG1_LPEN) << 1) | (config_block_r.CTRL_REG4 & CTRL_REG4_HR);
 	if(op_mode == LOW_POWER)
-		accel_inst->resolution = LOW_RES_BITS;
+		accel_inst.resolution = LOW_RES_BITS;
 	else if(op_mode == NORMAL)
-		accel_inst->resolution = NORMAL_RES_BITS;
+		accel_inst.resolution = NORMAL_RES_BITS;
 	else
-		accel_inst->resolution = HIGH_RES_BITS;
+		accel_inst.resolution = HIGH_RES_BITS;
 
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializated.");

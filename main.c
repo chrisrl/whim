@@ -66,7 +66,6 @@ extern uint32_t read_index;
 
 int main(void)
 {
-	lis2dh12_instance_t accel_inst = {0}; // Create an empty instance of the LIS2DH12
 	bsp_board_leds_init();
 
 	APP_ERROR_CHECK(NRF_LOG_INIT(NULL));
@@ -76,7 +75,7 @@ int main(void)
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 
-	if(!ACCEL_init(&accel_inst))
+	if(!ACCEL_init())
 	{
 		NRF_LOG_INFO("ERROR: Accelerometer Initialization failed!");
 		NRF_LOG_FLUSH();
@@ -94,21 +93,28 @@ int main(void)
 
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
-
-	accel_xyz_data_t xyz_data = {0};
+	
+	static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
 	char disp_string[100];
 	while (1)
 	{	
 		if(fifo_wtm_flag == 1)
 		{
-			ACCEL_read_xyz(&xyz_data, &accel_inst);
-		  sprintf(disp_string, "Accelerometer Data: X = %.2f, Y = %.2f, Z = %.2f ---- Read Index = %d", xyz_data.out_x, xyz_data.out_y, xyz_data.out_z, read_index);
-	
-		  NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+			bsp_board_led_invert(BSP_BOARD_LED_0);
+			ACCEL_read_xyz_fifo(accel_data);
+			for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
+			{
+				sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[i].out_x, accel_data[i].out_y, accel_data[i].out_z);
+				NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+				NRF_LOG_FLUSH(); //flush more often then every 32 loops so that the buffer doesn't overflow
+			}
+			NRF_LOG_INFO("Read Index = %d",read_index);
 		  NRF_LOG_FLUSH();
-		}
+		  fifo_wtm_flag = 0;
+		}		
 		
-		bsp_board_led_invert(BSP_BOARD_LED_0);
+		  // Uncomment if you would like to see LED3 flash
+//		bsp_board_led_invert(BSP_BOARD_LED_3);
 		nrf_delay_ms(1000);
 	}
 }

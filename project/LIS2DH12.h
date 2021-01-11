@@ -76,9 +76,9 @@ typedef struct {
 															   PROCEDURES
 *******************************************************************************/
 
-void ACCEL_read_xyz(accel_xyz_data_t* xyz_data, lis2dh12_instance_t* accel_inst);
-void ACCEL_read_xyz_fifo(accel_xyz_data_t data[], lis2dh12_instance_t* accel_inst, uint16_t length);
-bool ACCEL_init(lis2dh12_instance_t* accel_inst);
+void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
+void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
+bool ACCEL_init(void);
 bool ACCEL_fifo_init(void);
 void ACCEL_pwrdn(void);
 
