@@ -124,7 +124,7 @@ int main(void)
 				
 				#ifdef DISPLAY_IMPACT_DATA
 				//TODO throw some printy bois in here
-				if(impact_data[i] > 2.0)
+				if(impact_data[i] > IMPACT_THRESHOLD)
 				{
 					NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
 					NRF_LOG_FLUSH();	
