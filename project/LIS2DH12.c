@@ -11,6 +11,7 @@ and communicating with the LIS2DH12 acclerometer module
 															GENERAL INCLUDES
 *******************************************************************************/
 #include <string.h>
+#include <math.h>
 #include "boards.h"
 #include "sdk_common.h"
 
@@ -57,7 +58,7 @@ typedef struct {
 typedef struct {
 	uint8_t start_address;
 	uint8_t *buffer;
-	uint8_t buffer_length;
+	uint16_t buffer_length;
 } block_command_t;
 
 /*******************************************************************************
@@ -256,8 +257,7 @@ static void accel_fifo_set_fifo_mode(void) // Optional: this could return bool f
  */
 static void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
 {
-	fifo_wtm_flag = 1;
-	read_index++;
+	fifo_wtm_flag = 1; // Set wtm_flag
 }
 
 /**
@@ -456,6 +456,23 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 		accel_fifo_set_bypass_mode();
 		accel_fifo_set_fifo_mode();
 	}
+}
+
+bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
+{
+	uint8_t batch_flag = 0; // This flag is used to indicate whether an impact has been detected in this batch of data
+	
+	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
+	{
+		impact_data[i] = sqrt(pow(data_in[i].out_x, 2) + pow(data_in[i].out_y,2) + pow(data_in[i].out_z,2)); // Take the magnitude of a single XYZ sample
+		
+		if(impact_data[i] > IMPACT_THRESHOLD)
+		{
+			batch_flag = 1;
+		}
+	}
+	
+	return batch_flag == 1; // If batch flag == 1, an impact has been detected. Return true
 }
 
 /**
