@@ -58,7 +58,7 @@
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 //#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
-//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
 extern volatile uint8_t fifo_wtm_flag;
 extern uint32_t read_index;
@@ -109,6 +109,11 @@ int main(void)
 			ACCEL_read_xyz_fifo(accel_data);
 			impact_detected = ACCEL_analyze_xyz(accel_data, impact_data);
 			
+			if(impact_detected)
+			{
+				NRF_LOG_INFO("...Impact level event(s) detected...");
+			}
+			
 			for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
 			{
 			  #ifdef DISPLAY_ACCEL_DATA
@@ -119,14 +124,12 @@ int main(void)
 				
 				#ifdef DISPLAY_IMPACT_DATA
 				//TODO throw some printy bois in here
-				NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
-				NRF_LOG_FLUSH();				
+				if(impact_data[i] > 2.0)
+				{
+					NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
+					NRF_LOG_FLUSH();	
+				}			
 				#endif
-			}
-			
-			if(impact_detected)
-			{
-				NRF_LOG_INFO("...Impact level event(s) detected...");
 			}
 			
 		  NRF_LOG_FLUSH();

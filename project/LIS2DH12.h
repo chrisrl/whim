@@ -51,6 +51,11 @@ typedef struct {
 	float out_z;
 } accel_xyz_data_t;
 
+//typedef struct {
+//	float accel_magnitude;
+//	bool	impact_event;
+//} impact_data_t;
+
 enum {
 	SCALE_2G = 2,
 	SCALE_4G = 4,
