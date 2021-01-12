@@ -40,6 +40,8 @@ and communication with the LIS2DH12 accelerometer module
 
 #define ACCEL_FIFO_LENGTH (32)
 #define BYTES_PER_DATA_SAMPLE (6)
+
+#define IMPACT_THRESHOLD ((float) 2) // The threshold in g's that if surpassed indicates that an impact level event has occured
 /*******************************************************************************
 															     TYPEDEFS
 *******************************************************************************/
@@ -79,6 +81,7 @@ typedef struct {
 
 void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
 void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
+bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
 bool ACCEL_init(void);
 bool ACCEL_fifo_init(void);
 void ACCEL_pwrdn(void);

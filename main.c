@@ -57,8 +57,16 @@
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
+//#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
+//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+
 extern volatile uint8_t fifo_wtm_flag;
 extern uint32_t read_index;
+
+static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
+static float impact_data[ACCEL_FIFO_LENGTH]; // One fifo worth of analyzed data
+static bool impact_detected = false; // Boolean used to indicate if an impact has occured
+static char disp_string[100]; // String used to display desired output data
 
 /*******************************************************************************
 															      PROCEDURES
@@ -90,31 +98,41 @@ int main(void)
 		nrf_delay_ms(100);
 		return 0;
 	}
-
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
-	static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
-	char disp_string[100];
 	while (1)
 	{	
 		if(fifo_wtm_flag == 1)
-		{
-			bsp_board_led_invert(BSP_BOARD_LED_0);
+		{				
+			//bsp_board_led_invert(BSP_BOARD_LED_0);
 			ACCEL_read_xyz_fifo(accel_data);
+			impact_detected = ACCEL_analyze_xyz(accel_data, impact_data);
+			
 			for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
 			{
-				sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[i].out_x, accel_data[i].out_y, accel_data[i].out_z);
-				NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
-				NRF_LOG_FLUSH(); //flush more often then every 32 loops so that the buffer doesn't overflow
+			  #ifdef DISPLAY_ACCEL_DATA
+			    sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[i].out_x, accel_data[i].out_y, accel_data[i].out_z);
+				  NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+				  NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
+			  #endif
+				
+				#ifdef DISPLAY_IMPACT_DATA
+				//TODO throw some printy bois in here
+				NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
+				NRF_LOG_FLUSH();				
+				#endif
 			}
-			NRF_LOG_INFO("Read Index = %d",read_index);
+			
+			if(impact_detected)
+			{
+				NRF_LOG_INFO("...Impact level event(s) detected...");
+			}
+			
 		  NRF_LOG_FLUSH();
-		  fifo_wtm_flag = 0;
 		}		
 		
-		  // Uncomment if you would like to see LED3 flash
-//		bsp_board_led_invert(BSP_BOARD_LED_3);
-		nrf_delay_ms(1000);
+	  //bsp_board_led_invert(BSP_BOARD_LED_3);
+		//nrf_delay_ms(1000);
 	}
 }
