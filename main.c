@@ -87,7 +87,7 @@
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
+//#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
 #define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
 extern volatile uint8_t fifo_wtm_flag;
@@ -96,12 +96,16 @@ extern uint32_t read_index;
 static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
 static float impact_data[ACCEL_FIFO_LENGTH]; // One fifo worth of analyzed data
 static bool impact_detected = false; // Boolean used to indicate if an impact has occured
+
+#ifdef DISPLAY_ACCEL_DATA
 static char disp_string[100]; // String used to display desired output data
+#endif
+
+volatile uint8_t impact_count = 0; // Variable to hold the overall impact count of this device
 
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
-accel_xyz_data_t xyz_data = {0};
 
 /**@brief Function for the Timer and BSP initialization.
  */
@@ -171,6 +175,7 @@ int main(void)
 			
 			if(impact_detected)
 			{
+				++impact_count;
 				NRF_LOG_INFO("...Impact level event(s) detected...");
 			}
 			

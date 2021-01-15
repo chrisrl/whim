@@ -30,8 +30,6 @@ and communicating over ANT wireless protocol
 
 #include "LIS2DH12.h"
 
-extern accel_xyz_data_t xyz_data;
-
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
@@ -44,6 +42,8 @@ extern accel_xyz_data_t xyz_data;
 
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
 static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
+
+extern volatile uint8_t impact_count; // Variable to hold the overall impact count of this device
 
 
 /*******************************************************************************
@@ -61,7 +61,7 @@ static void ant_handle_transmit()
 
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
-	m_broadcast_data[1] = m_tx_input_pin_state;
+	m_broadcast_data[1] = impact_count;
 	m_broadcast_data[2] = 0;
 	m_broadcast_data[3] = 0;
 	m_broadcast_data[4] = 0;
