@@ -21,10 +21,6 @@ and communication with the LIS2DH12 accelerometer module
 																	  MACROS
 *******************************************************************************/
 
-/*NOTE: Uncomment these lines for more debug info*/
-//#define SPI_DEBUG_INFO
-//#define ACCEL_DEBUG_INFO
-
 #define SCALE_SELECT_MASK (CTRL_REG4_FS0 | CTRL_REG4_FS1)
 
 // This value represents the measurement sensitivity of the accelerometer device's X, Y, and Z registers.

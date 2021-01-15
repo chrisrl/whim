@@ -68,7 +68,7 @@ lis2dh12_instance_t accel_inst = {0}; // Instance of the LIS2DH12
 
 /*NOTE: Uncomment these lines for more debug info*/
 //#define SPI_DEBUG_INFO
-//#define ACCEL_DEBUG_INFO
+#define ACCEL_DEBUG_INFO
 
 #define SPI_INSTANCE  0 //SPI instance index
 const nrf_drv_spi_t spi = NRF_DRV_SPI_INSTANCE(SPI_INSTANCE); //SPI instance

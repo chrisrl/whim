@@ -87,7 +87,7 @@
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-//#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
+#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
 #define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
 extern volatile uint8_t fifo_wtm_flag;
@@ -117,8 +117,7 @@ static void utils_setup(void)
 		NRF_LOG_INFO("%d", err_code);
     APP_ERROR_CHECK(err_code);
 
-    err_code = bsp_init(BSP_INIT_LED | BSP_INIT_BUTTONS,
-                        NULL);
+    err_code = bsp_init(BSP_INIT_LED, NULL);
 		NRF_LOG_INFO("%d", err_code);
     APP_ERROR_CHECK(err_code);
 

@@ -30,14 +30,14 @@ and communicating over ANT wireless protocol
 
 #include "LIS2DH12.h"
 
-extern AccelXYZDataStruct xyz_data;
+extern accel_xyz_data_t xyz_data;
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 
 /*NOTE: Uncomment these lines for more debug info*/
-//#define ANT_DEBUG_INFO
+#define ANT_DEBUG_INFO
 
 #define DIGITALIO_DATA_PID              1u                      /**< Page number: digital data. */
 #define APP_ANT_OBSERVER_PRIO           1                       /**< Application's ANT observer priority. You shouldn't need to modify this value. */
@@ -50,56 +50,6 @@ static uint8_t m_tx_input_pin_state = 0;                         /**< State of d
 															    PROCEDURES
 *******************************************************************************/
 
-static void ant_button_state_encode(void)
-{
-	if (bsp_button_is_pressed(0))
-	{
-		NRF_LOG_INFO("1");
-		bsp_board_led_on(BSP_BOARD_LED_0);
-
-		if(m_tx_input_pin_state < 255)
-			m_tx_input_pin_state++;
-	}
-	else
-	{
-	bsp_board_led_off(BSP_BOARD_LED_0);
-	}
-
-	if (bsp_button_is_pressed(1))
-	{
-		NRF_LOG_INFO("2");
-		bsp_board_led_on(BSP_BOARD_LED_1);
-	}
-	else
-	{
-		bsp_board_led_off(BSP_BOARD_LED_1);
-	}
-
-	if (bsp_button_is_pressed(2))
-	{
-		NRF_LOG_INFO("3");
-		bsp_board_led_on(BSP_BOARD_LED_2);
-	}
-	else
-	{
-		bsp_board_led_off(BSP_BOARD_LED_2);
-	}
-
-	if (bsp_button_is_pressed(3))
-	{
-		NRF_LOG_INFO("4");
-		bsp_board_led_on(BSP_BOARD_LED_3);
-
-		if(m_tx_input_pin_state > 0)
-			m_tx_input_pin_state--;
-	}
-	else
-	{
-		bsp_board_led_off(BSP_BOARD_LED_3);
-	}
-}
-
-
 /**@brief Formats page with current button state and sends data
  * Byte 0   = Page number (Digital I/O Data)
  * Byte 1-6 = Reserved
@@ -109,16 +59,15 @@ static void ant_handle_transmit()
 {
 	uint32_t err_code;
 
-	ant_button_state_encode();
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
 	m_broadcast_data[1] = m_tx_input_pin_state;
-	m_broadcast_data[2] = (uint8_t)((xyz_data.out_x >> 8) & 0xFF);
-	m_broadcast_data[3] = (uint8_t)(xyz_data.out_x & 0xFF);
-	m_broadcast_data[4] = (uint8_t)((xyz_data.out_y >> 8) & 0xFF);
-	m_broadcast_data[5] = (uint8_t)(xyz_data.out_y & 0xFF);
-	m_broadcast_data[6] = (uint8_t)((xyz_data.out_z >> 8) & 0xFF);
-	m_broadcast_data[7] = (uint8_t)(xyz_data.out_z & 0xFF);
+	m_broadcast_data[2] = 0;
+	m_broadcast_data[3] = 0;
+	m_broadcast_data[4] = 0;
+	m_broadcast_data[5] = 0;
+	m_broadcast_data[6] = 0;
+	m_broadcast_data[7] = 0;
 
 	err_code = sd_ant_broadcast_message_tx(ANT_CHANNEL_NUM,
 																				 ANT_STANDARD_DATA_PAYLOAD_SIZE,
