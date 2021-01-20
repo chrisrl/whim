@@ -39,6 +39,7 @@ and communicating over ANT wireless protocol
 
 #define DIGITALIO_DATA_PID              1u                      /**< Page number: digital data. */
 #define APP_ANT_OBSERVER_PRIO           1                       /**< Application's ANT observer priority. You shouldn't need to modify this value. */
+#define RESET_IMPACT_COUNT							0x10										
 
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
 static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
@@ -73,6 +74,13 @@ static void ant_handle_transmit()
 																				 ANT_STANDARD_DATA_PAYLOAD_SIZE,
 																				 m_broadcast_data);
 	APP_ERROR_CHECK(err_code);
+}
+
+static void ant_handle_receieve(ant_evt_t * p_ant_evt) {
+	
+	if(p_ant_evt->message.ANT_MESSAGE_aucPayload[0] == RESET_IMPACT_COUNT) {
+		impact_count = 0;
+	}
 }
 
 
@@ -144,7 +152,7 @@ static void ant_evt_handler(ant_evt_t * p_ant_evt, void * p_context)
 	{
 		case EVENT_RX:
 			NRF_LOG_INFO("RX");
-		//TODO: Handle a received message
+			ant_handle_receieve(p_ant_evt);
 			break;
 
 		case EVENT_TX:
