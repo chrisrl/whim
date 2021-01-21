@@ -3,7 +3,7 @@
  * Auto generated Run-Time-Environment Configuration File
  *      *** Do not modify ! ***
  *
- * Project: 'spi_pca10040' 
+ * Project: 'whim' 
  * Target:  'nrf52832_xxaa' 
  */
 
