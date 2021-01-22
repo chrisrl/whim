@@ -192,8 +192,9 @@ static void accel_read_block(block_command_t* cmd)
  */
 static bool accel_fifo_check(void)
 {
-	reg_command.address = FIFO_SRC_REG;
-	if((accel_read_register(&reg_command) & FIFO_SRC_EMPTY) == FIFO_SRC_EMPTY)
+	reg_command.address = FIFO_STATUS;
+	uint8_t fifo_empty_mask = FIFO_STATUS_ENT5 | FIFO_STATUS_ENT4 | FIFO_STATUS_ENT3 | FIFO_STATUS_ENT2 | FIFO_STATUS_ENT1 | FIFO_STATUS_ENT0;
+	if((accel_read_register(&reg_command) & fifo_empty_mask) == 0)
 	{
 		fifo_wtm_flag = 0;
 		return true;
@@ -202,40 +203,14 @@ static bool accel_fifo_check(void)
 }
 
 /**
- * @brief Function enables the FIFO
- * This function writes the neccessary values to registers enable the FIFO
- * @param[in] none
- */
-static bool accel_fifo_enable(void)
-{
-	uint8_t fifo_config_w = CTRL_REG5_FIFO_EN;
-	reg_command.address = CTRL_REG5;
-	reg_command.value = fifo_config_w;
-	accel_write_register(&reg_command);
-	
-	uint8_t fifo_config_r = accel_read_register(&reg_command);
-	
-	if(fifo_config_w != fifo_config_r)
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("FIFO Enable failed!");
-		#endif
-		
-		return false;
-	}
-	
-	return true;
-}
-
-/**
  * @brief Function sets the FIFO to bypass mode
  * This function writes the neccessary values to registers put the FIFO into bypass mode
  * @param[in] none
  */
-static void accel_fifo_set_bypass_mode(void) // Optional: this could return bool for init purposes, and remain unused in other cases
+static void accel_fifo_set_bypass_mode(void)
 {
 	// Put the FIFO into bypass mode and clear the register
-	reg_command.address = FIFO_CTRL_REG;
+	reg_command.address = FIFO_CTL;
 	reg_command.value = 0x00;
 	accel_write_register(&reg_command);	
 }
@@ -245,12 +220,39 @@ static void accel_fifo_set_bypass_mode(void) // Optional: this could return bool
  * This function writes the neccessary values to registers put the FIFO into fifo mode
  * @param[in] none
  */
-static void accel_fifo_set_fifo_mode(void) // Optional: this could return bool for init purposes, and remain unused in other cases
+static void accel_fifo_set_fifo_mode(void)
 {
 	// Put the FIFO into fifo mode and set the fifo ctrl values
-	reg_command.address = FIFO_CTRL_REG;
-	reg_command.value = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
+	reg_command.address = FIFO_CTL;
+	reg_command.value = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
 	accel_write_register(&reg_command);	
+}
+
+/**
+ * @brief Function enables the fifo interrupts
+ * This function enables the fifo watermark interrupt bit of the INT_ENABLE register
+ * @param[in] none
+ */
+static bool accel_fifo_interrupt_enable(void)
+{
+	// Enable the FIFO watermark interrupt
+	uint8_t fifo_int_config_w = INT_ENABLE_WTM;
+	reg_command.address = INT_ENABLE;
+	reg_command.value = fifo_int_config_w;
+	accel_write_register(&reg_command);
+
+	uint8_t fifo_int_config_r = accel_read_register(&reg_command);
+
+	if((fifo_int_config_w != fifo_int_config_r))
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("FIFO Interrupt Initialization failed!");
+		#endif
+
+		return false;
+	}	
+	
+	return true;
 }
 
 /**
@@ -485,23 +487,24 @@ bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
 
 /**
  * @brief Function initializes and enables the FIFO
- * This function writes the neccessary values to the desired CTRL registers to initialize the FIFO
+ * This function writes the neccessary values to the desired FIFO_CTL register to initialize the FIFO
  * @param[in] none
  */
 bool ACCEL_fifo_init(void)
 {
+	// Do not think this is needed anymore. But also may not be a bad idea 
 	accel_fifo_set_bypass_mode(); // Set bypass mode to clear fifo buffer of any existing samples
 	nrf_delay_ms(10);
 
 	// Initialize the FIFO
-	uint8_t fifo_config_w = FIFO_CTRL_FM0 | FIFO_CTRL_FTH4 | FIFO_CTRL_FTH3 | FIFO_CTRL_FTH2 | FIFO_CTRL_FTH1 | FIFO_CTRL_FTH0;
-	reg_command.address = FIFO_CTRL_REG;
+	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
+	reg_command.address = FIFO_CTL;
 	reg_command.value = fifo_config_w;
 	accel_write_register(&reg_command);
 
 	uint8_t fifo_config_r = accel_read_register(&reg_command);
 
-	if((fifo_config_w != fifo_config_r) | !accel_fifo_enable())
+	if((fifo_config_w != fifo_config_r) && accel_fifo_interrupt_enable())
 	{
 		#ifdef ACCEL_DEBUG_INFO
 		NRF_LOG_INFO("FIFO Initialization failed!");
