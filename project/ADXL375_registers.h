@@ -137,15 +137,21 @@ enum {
 #define CTRL_REG6_I2_INT1			(uint8_t)(1 << 6)
 #define CTRL_REG6_I2_CLICKen	(uint8_t)(1 << 7)
 
-#define FIFO_CTRL_FTH0 ((uint8_t) (1 << 0))
-#define FIFO_CTRL_FTH1 ((uint8_t) (1 << 1))
-#define FIFO_CTRL_FTH2 ((uint8_t) (1 << 2))
-#define FIFO_CTRL_FTH3 ((uint8_t) (1 << 3))
-#define FIFO_CTRL_FTH4 ((uint8_t) (1 << 4))
-#define FIFO_CTRL_FM0  ((uint8_t) (1 << 6))
-#define FIFO_CTRL_FM1  ((uint8_t) (1 << 7))
+#define FIFO_CTL_SMPL0  ((uint8_t) (1 << 0))
+#define FIFO_CTL_SMPL1  ((uint8_t) (1 << 1))
+#define FIFO_CTL_SMPL2  ((uint8_t) (1 << 2))
+#define FIFO_CTL_SMPL3  ((uint8_t) (1 << 3))
+#define FIFO_CTL_SMPL4  ((uint8_t) (1 << 4))
+#define FIFO_CTL_MODE0  ((uint8_t) (1 << 6))
 
-#define FIFO_SRC_EMPTY ((uint8_t) (1 << 5))
+#define FIFO_STATUS_ENT0 ((uint8_t) (1 << 0))
+#define FIFO_STATUS_ENT1 ((uint8_t) (1 << 1))
+#define FIFO_STATUS_ENT2 ((uint8_t) (1 << 2))
+#define FIFO_STATUS_ENT3 ((uint8_t) (1 << 3))
+#define FIFO_STATUS_ENT4 ((uint8_t) (1 << 4))
+#define FIFO_STATUS_ENT5 ((uint8_t) (1 << 5))
+
+#define INT_ENABLE_WTM ((uint8_t) (1 << 1))
 
 #define INT1_PIN ((nrf_drv_gpiote_pin_t) 25)
 
