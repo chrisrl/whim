@@ -291,11 +291,11 @@ static void accel_pin_int_init(void)
  */
 static bool accel_probe(void)
 {
-	reg_command.address = WHO_AM_I;
+	reg_command.address = DEVID;
 	
 	uint8_t reg_val = accel_read_register(&reg_command);
 	
-	if(reg_val != LIS2DH12_WHO_AM_I)
+	if(reg_val != ADXL375_DEVICE_ID)
 	{
 		#ifdef ACCEL_DEBUG_INFO
 		NRF_LOG_INFO("Accel Probe Failed!");
