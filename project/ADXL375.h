@@ -41,50 +41,50 @@ and communication with the LIS2DH12 accelerometer module
 /*******************************************************************************
 															     TYPEDEFS
 *******************************************************************************/
-//typedef struct {
-//	float out_x;
-//	float out_y;
-//	float out_z;
-//} accel_xyz_data_t;
-
-////typedef struct {
-////	float accel_magnitude;
-////	bool	impact_event;
-////} impact_data_t;
-
-//enum {
-//	SCALE_2G = 2,
-//	SCALE_4G = 4,
-//	SCALE_8G = 8,
-//	SCALE_16G = 16,
-//};
-
-//typedef enum {
-//	HIGH_RES_BITS = 12,
-//	NORMAL_RES_BITS = 10,
-//	LOW_RES_BITS = 8,
-//} resolution_mode_t;
-
-//enum {
-//	LOW_POWER = 0x10,
-//	NORMAL = 0x00,
-//	HIGH_RES = 0x08,
-//};
+typedef struct {
+	float out_x;
+	float out_y;
+	float out_z;
+} accel_xyz_data_t;
 
 //typedef struct {
-//	adxl375_reg_map_t reg_map;
-//	resolution_mode_t resolution;
-//} adxl375_instance_t;
-//	
-///*******************************************************************************
-//															   PROCEDURES
-//*******************************************************************************/
+//	float accel_magnitude;
+//	bool	impact_event;
+//} impact_data_t;
 
-//void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
-//void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
-//bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
-//bool ACCEL_init(void);
-//bool ACCEL_fifo_init(void);
-//void ACCEL_pwrdn(void);
+enum {
+	SCALE_2G = 2,
+	SCALE_4G = 4,
+	SCALE_8G = 8,
+	SCALE_16G = 16,
+};
+
+typedef enum {
+	HIGH_RES_BITS = 12,
+	NORMAL_RES_BITS = 10,
+	LOW_RES_BITS = 8,
+} resolution_mode_t;
+
+enum {
+	LOW_POWER = 0x10,
+	NORMAL = 0x00,
+	HIGH_RES = 0x08,
+};
+
+typedef struct {
+	adxl375_reg_map_t reg_map;
+	resolution_mode_t resolution;
+} adxl375_instance_t;
+	
+/*******************************************************************************
+															   PROCEDURES
+*******************************************************************************/
+
+void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
+void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
+bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
+bool ACCEL_init(void);
+bool ACCEL_fifo_init(void);
+void ACCEL_pwrdn(void);
 
 #endif /*ADXL375_H*/

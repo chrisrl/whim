@@ -202,16 +202,9 @@ int main(void)
 //		}		
 //		
 //    nrf_pwr_mgmt_run();
-		NRF_LOG_INFO("THRESH_SHOCK: 0x%x",THRESH_SHOCK);
-		NRF_LOG_FLUSH();
-		NRF_LOG_INFO("ACT_INACT_CTL: 0x%x",ACT_INACT_CTL);
-		NRF_LOG_FLUSH();
-		NRF_LOG_INFO("SHOCK_AXES: 0x%x",SHOCK_AXES);
-		NRF_LOG_FLUSH();
-		NRF_LOG_INFO("FIFO_STATUS: 0x%x",FIFO_STATUS);
-		NRF_LOG_FLUSH();
+
 	  //bsp_board_led_invert(BSP_BOARD_LED_3);
-		nrf_delay_ms(1000);
+		//nrf_delay_ms(1000);
 	}
 }
 
