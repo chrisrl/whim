@@ -85,57 +85,12 @@ enum {
 
 #define ADXL375_DEVICE_ID 0xE5 // ADXL375 DEVID register value.
 
-#define CTRL_REG0_VALID_MASK (uint8_t)(0x10)
-#define CTRL_REG0_SDO_PU_DISC (uint8_t)(1 << 7)
+#define DATA_RATE_3200HZ ((uint8_t) 0x0F)
+#define DATA_RATE_1600HZ ((uint8_t) 0x0E)
+#define DATA_RATE_800HZ  ((uint8_t) 0x0D)
+#define DATA_RATE_400HZ  ((uint8_t) 0x0C)
 
-#define CTRL_REG1_X_EN		(uint8_t)(1 << 0)
-#define CTRL_REG1_Y_EN		(uint8_t)(1 << 1)
-#define CTRL_REG1_Z_EN  	(uint8_t)(1 << 2)
-#define CTRL_REG1_LPEN	(uint8_t)(1 << 3)
-#define CTRL_REG1_ODR0	(uint8_t)(1 << 4)
-#define CTRL_REG1_ODR1	(uint8_t)(1 << 5)
-#define CTRL_REG1_ODR2	(uint8_t)(1 << 6)
-#define CTRL_REG1_ODR3	(uint8_t)(1 << 7)
-
-#define CTRL_REG2_HPIS1 	(uint8_t)(1 << 0)
-#define CTRL_REG2_HPIS2 	(uint8_t)(1 << 1)
-#define CTRL_REG2_HPCLICK (uint8_t)(1 << 2)
-#define CTRL_REG2_FDS 		(uint8_t)(1 << 3)
-#define CTRL_REG2_HPCF1 	(uint8_t)(1 << 4)
-#define CTRL_REG2_HPCF2 	(uint8_t)(1 << 5)
-#define CTRL_REG2_HPM0 		(uint8_t)(1 << 6)
-#define CTRL_REG2_HPM1 		(uint8_t)(1 << 7)
-
-#define CTRL_REG3_I1_OVERRUN	(uint8_t)(1 << 1)
-#define CTRL_REG3_I1_WTM			(uint8_t)(1 << 2)
-#define CTRL_REG3_I1_DRDY2		(uint8_t)(1 << 3)
-#define CTRL_REG3_I1_DRDY1		(uint8_t)(1 << 4)
-#define CTRL_REG3_I1_AOI2			(uint8_t)(1 << 5)
-#define CTRL_REG3_I1_AOI1			(uint8_t)(1 << 6)
-#define CTRL_REG3_I1_CLICK		(uint8_t)(1 << 7)
-
-#define CTRL_REG4_SIM	(uint8_t)(1 << 0)
-#define CTRL_REG4_ST0	(uint8_t)(1 << 1)
-#define CTRL_REG4_ST1	(uint8_t)(1 << 2)
-#define CTRL_REG4_HR	(uint8_t)(1 << 3)
-#define CTRL_REG4_FS0	(uint8_t)(1 << 4)
-#define CTRL_REG4_FS1	(uint8_t)(1 << 5)
-#define CTRL_REG4_BLE	(uint8_t)(1 << 6)
-#define CTRL_REG4_BDU	(uint8_t)(1 << 7)
-
-#define CTRL_REG5_D4D_INT2	(uint8_t)(1 << 0)
-#define CTRL_REG5_LIR_INT2	(uint8_t)(1 << 1)
-#define CTRL_REG5_D4D_INT1	(uint8_t)(1 << 2)
-#define CTRL_REG5_LIR_INT1	(uint8_t)(1 << 3)
-#define CTRL_REG5_FIFO_EN		(uint8_t)(1 << 6)
-#define CTRL_REG5_BOOT			(uint8_t)(1 << 7)
-
-#define CTRL_REG6_H_LACTIVE		(uint8_t)(1 << 1)
-#define CTRL_REG6_P2_ACT			(uint8_t)(1 << 3)
-#define CTRL_REG6_BOOT_I2			(uint8_t)(1 << 4)
-#define CTRL_REG6_I2_INT2			(uint8_t)(1 << 5)
-#define CTRL_REG6_I2_INT1			(uint8_t)(1 << 6)
-#define CTRL_REG6_I2_CLICKen	(uint8_t)(1 << 7)
+#define POWER_CTL_MEASURE ((uint8_t) (1 << 3))
 
 #define FIFO_CTL_SMPL0  ((uint8_t) (1 << 0))
 #define FIFO_CTL_SMPL1  ((uint8_t) (1 << 1))
@@ -153,7 +108,7 @@ enum {
 
 #define INT_ENABLE_WTM ((uint8_t) (1 << 1))
 
-#define INT1_PIN ((nrf_drv_gpiote_pin_t) 25)
+#define INT1_PIN ((nrf_drv_gpiote_pin_t) 7)
 
 #define WRITE_BIT	(uint8_t)(0 << 7)
 #define READ_BIT	(uint8_t)(1 << 7)

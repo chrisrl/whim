@@ -28,7 +28,7 @@ and communicating over ANT wireless protocol
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#include "LIS2DH12.h"
+#include "ADXL375.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS

@@ -238,7 +238,7 @@ static bool accel_fifo_interrupt_enable(void)
 	// Enable the FIFO watermark interrupt
 	uint8_t fifo_int_config_w = INT_ENABLE_WTM;
 	reg_command.address = INT_ENABLE;
-	reg_command.value = fifo_int_config_w;
+	reg_command.value = INT_ENABLE_WTM;
 	accel_write_register(&reg_command);
 
 	uint8_t fifo_int_config_r = accel_read_register(&reg_command);
@@ -296,6 +296,10 @@ static bool accel_probe(void)
 	reg_command.address = DEVID;
 	
 	uint8_t reg_val = accel_read_register(&reg_command);
+	
+	#ifdef ACCEL_DEBUG_INFO
+	NRF_LOG_INFO("Accel probe value: 0x%x",reg_val);
+	#endif
 	
 	if(reg_val != ADXL375_DEVICE_ID)
 	{
@@ -361,50 +365,50 @@ void ACCEL_read_xyz(accel_xyz_data_t* data)
 	
 	accel_xyz_out_t xyz_out_registers = {0};
 	
-	block_command.start_address = OUT_X_L;
+	block_command.start_address = DATAX0;
 	block_command.buffer = (uint8_t*)&xyz_out_registers;
 	block_command.buffer_length = sizeof(xyz_out_registers);
 	
 	accel_read_block(&block_command);
 	
-	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
-	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
-	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
+	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0));
+	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
+	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
 	
-	uint16_t negative_bit_mask = 1 << (accel_inst.resolution - 1);
-		
-	if((x_out_temp & negative_bit_mask) == negative_bit_mask) // If x_out is (-)
-	{
-		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-	}
-	else
-	{
-		data->out_x = SENSITIVITY * x_out_temp;
-	}
+//	uint16_t negative_bit_mask = 1 << (accel_inst.resolution - 1);
+//		
+//	if((x_out_temp & negative_bit_mask) == negative_bit_mask) // If x_out is (-)
+//	{
+//		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
+//	}
+//	else
+//	{
+//		data->out_x = SENSITIVITY * x_out_temp;
+//	}
+//	
+//	if((y_out_temp & negative_bit_mask) == negative_bit_mask) // If y_out is (-)
+//	{
+//		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
+//	}
+//	else
+//	{
+//		data->out_y = SENSITIVITY * y_out_temp;
+//	}
+//	
+//	if((z_out_temp & negative_bit_mask) == negative_bit_mask) // If z_out is (-)
+//	{
+//		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
+//	}
+//	else
+//	{
+//		data->out_z = SENSITIVITY * z_out_temp;
+//	}
 	
-	if((y_out_temp & negative_bit_mask) == negative_bit_mask) // If y_out is (-)
-	{
-		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-	}
-	else
-	{
-		data->out_y = SENSITIVITY * y_out_temp;
-	}
-	
-	if((z_out_temp & negative_bit_mask) == negative_bit_mask) // If z_out is (-)
-	{
-		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-	}
-	else
-	{
-		data->out_z = SENSITIVITY * z_out_temp;
-	}
-	
-	if(accel_fifo_check())
-	{
-		accel_fifo_set_bypass_mode();
-		accel_fifo_set_fifo_mode();
-	}
+//	if(accel_fifo_check())
+//	{
+//		accel_fifo_set_bypass_mode();
+//		accel_fifo_set_fifo_mode();
+//	}
 }
 
 /**
@@ -419,23 +423,20 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 	NRF_LOG_INFO("Reading accel XYZ block data...");
 	#endif
 
-	accel_xyz_out_t xyz_out_fifo[ACCEL_FIFO_LENGTH] = {0};	//initialize array of structs to all 0s
-
-	block_command.start_address = OUT_X_L;
-	block_command.buffer = (uint8_t*)xyz_out_fifo;
-	block_command.buffer_length = ACCEL_FIFO_LENGTH*BYTES_PER_DATA_SAMPLE;
-
-	accel_read_block(&block_command);
-
-	int16_t x_out_temp;
-	int16_t y_out_temp;
-	int16_t z_out_temp;
+	accel_xyz_out_t xyz_out_registers = {0};
+	
+	block_command.start_address = DATAX0;
+	block_command.buffer = (uint8_t*)&xyz_out_registers;
+	block_command.buffer_length = sizeof(xyz_out_registers);
+	
 
 	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
 	{
-		x_out_temp = (((int16_t)xyz_out_fifo[i].OUT_X_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_X_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
-		y_out_temp = (((int16_t)xyz_out_fifo[i].OUT_Y_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_Y_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
-		z_out_temp = (((int16_t)xyz_out_fifo[i].OUT_Z_H << 8) | ((int16_t)xyz_out_fifo[i].OUT_Z_L << 0)) >> (XYZ_FULL_DATA_SIZE - accel_inst.resolution);
+		accel_read_block(&block_command);
+	
+		int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0));
+		int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
+		int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
 		
 		uint16_t mask = 1 << (accel_inst.resolution - 1);
 			
@@ -461,11 +462,11 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 			data[i].out_z = SENSITIVITY * z_out_temp;
 	}
 	
-	if(accel_fifo_check())
-	{
-		accel_fifo_set_bypass_mode();
-		accel_fifo_set_fifo_mode();
-	}
+//	if(accel_fifo_check())
+//	{
+//		accel_fifo_set_bypass_mode();
+//		accel_fifo_set_fifo_mode();
+//	}
 }
 
 bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
@@ -526,6 +527,7 @@ bool ACCEL_init(void)
 	// Initialize the SPI peripheral
 	spi_init();
 
+	nrf_delay_ms(100);
 	// Check device ID
 	if(!accel_probe())
 	{
@@ -539,50 +541,35 @@ bool ACCEL_init(void)
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializing...");
 	#endif
+	
+	//set data rate
+	reg_command.address = BW_RATE;
+	reg_command.value = DATA_RATE_1600HZ;
+	accel_write_register(&reg_command);
+	//start measuring
+	reg_command.address = POWER_CTL;
+	reg_command.value = POWER_CTL_MEASURE;
+	accel_write_register(&reg_command);
 
-	// Initialize the CTRL registers
-	control_block_t config_block_w = {
-		CTRL_REG0_VALID_MASK,
-		0x00,
-		CTRL_REG1_X_EN | CTRL_REG1_Y_EN | CTRL_REG1_Z_EN | CTRL_REG1_ODR0 | CTRL_REG1_ODR1,
-		0x00,
-		CTRL_REG3_I1_WTM,
-		CTRL_REG4_BDU | CTRL_REG4_FS0 | CTRL_REG4_FS1,
-	};		
-
-	block_command.start_address = CTRL_REG0;
-	block_command.buffer = (uint8_t*)&config_block_w;
-	block_command.buffer_length = sizeof(config_block_w);
-
-	accel_write_block(&block_command);
 
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Verifying...");
 	#endif
 
-	control_block_t config_block_r = {0};
-	block_command.start_address = CTRL_REG0;
-	block_command.buffer = (uint8_t*)&config_block_r;
-	block_command.buffer_length = sizeof(config_block_r);
-	accel_read_block(&block_command);
-	
-	if(memcmp(&config_block_r, &config_block_w, sizeof(control_block_t)) != 0)
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("Accelerometer Initialization failed!");
-		#endif
+//	control_block_t config_block_r = {0};
+//	block_command.start_address = CTRL_REG0;
+//	block_command.buffer = (uint8_t*)&config_block_r;
+//	block_command.buffer_length = sizeof(config_block_r);
+//	accel_read_block(&block_command);
+//	
+//	if(memcmp(&config_block_r, &config_block_w, sizeof(control_block_t)) != 0)
+//	{
+//		#ifdef ACCEL_DEBUG_INFO
+//		NRF_LOG_INFO("Accelerometer Initialization failed!");
+//		#endif
 
-		return false;
-	}
-
-	// Set the resolution of the samples from the X Y Z registers
-	uint8_t op_mode = ((config_block_r.CTRL_REG1 & CTRL_REG1_LPEN) << 1) | (config_block_r.CTRL_REG4 & CTRL_REG4_HR);
-	if(op_mode == LOW_POWER)
-		accel_inst.resolution = LOW_RES_BITS;
-	else if(op_mode == NORMAL)
-		accel_inst.resolution = NORMAL_RES_BITS;
-	else
-		accel_inst.resolution = HIGH_RES_BITS;
+//		return false;
+//	}
 
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializated.");
@@ -598,9 +585,9 @@ bool ACCEL_init(void)
  */
 void ACCEL_pwrdn(void)
 {
-	// Set Accel to power-down mode and disable all axes
-	reg_command.address = CTRL_REG1;
-	reg_command.value = 0x00;
+//	// Set Accel to power-down mode and disable all axes
+//	reg_command.address = CTRL_REG1;
+//	reg_command.value = 0x00;
 
-	accel_write_register(&reg_command);
+//	accel_write_register(&reg_command);
 }
