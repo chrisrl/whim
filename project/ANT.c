@@ -23,11 +23,14 @@ and communicating over ANT wireless protocol
 #include "nrf_soc.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_ant.h"
+#include "nrf_fstorage.h"
+#include "nrf_fstorage_sd.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
+#include "fstorage_manager.h"
 #include "LIS2DH12.h"
 
 /*******************************************************************************
@@ -44,9 +47,10 @@ and communicating over ANT wireless protocol
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
 static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
 
+volatile uint8_t impact_reset_flag = 0;
+
 extern volatile uint8_t impact_count; // Variable to hold the overall impact count of this device
-
-
+extern nrf_fstorage_t* p_fs_api; // Pointer to the fstorage instance
 /*******************************************************************************
 															    PROCEDURES
 *******************************************************************************/
@@ -76,13 +80,16 @@ static void ant_handle_transmit()
 	APP_ERROR_CHECK(err_code);
 }
 
-static void ant_handle_receieve(ant_evt_t * p_ant_evt) {
-	
-	if(p_ant_evt->message.ANT_MESSAGE_aucPayload[0] == RESET_IMPACT_COUNT) {
-		impact_count = 0;
+/**@brief Function to handle reset event
+ * This function handles the RESET_IMPACT_COUNT event and sets impact count to 0.
+ */
+static void ant_handle_receieve(ant_evt_t * p_ant_evt) 
+{
+	if(p_ant_evt->message.ANT_MESSAGE_aucPayload[0] == RESET_IMPACT_COUNT) 
+	{
+		impact_reset_flag = 1;
 	}
 }
-
 
 /**@brief Function for ANT stack initialization.
  */
