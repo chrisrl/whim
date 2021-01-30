@@ -88,8 +88,8 @@
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
-//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+//#define DISPLAY_ACCEL_DATA // Uncomment if the raw accelerometer data needs to be displayed
+#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
 extern volatile uint8_t fifo_wtm_flag;
 extern uint32_t read_index;
@@ -107,6 +107,11 @@ volatile uint8_t impact_count = 0; // Variable to hold the overall impact count 
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
+
+//static void init_leds(void)
+//{
+//	
+//}
 
 /**@brief Function for the Timer and BSP initialization.
  */
@@ -154,31 +159,25 @@ int main(void)
 		nrf_delay_ms(100);
 		return 0;
 	}
-
-	if(!ACCEL_fifo_init())
-	{
-		NRF_LOG_INFO("ERROR: FIFO Initialization failed!");
-		NRF_LOG_FLUSH();
-		nrf_delay_ms(100);
-		return 0;
-	}
+	
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
 
 	while (1)
-	{	
+	{
 		if(fifo_wtm_flag == 1)
-		{				
+		{
 			//bsp_board_led_invert(BSP_BOARD_LED_0);
 			ACCEL_read_xyz_fifo(accel_data);
-//			impact_detected = ACCEL_analyze_xyz(accel_data, impact_data);
-//			
-//			if(impact_detected)
-//			{
-//				++impact_count;
-//				NRF_LOG_INFO("...Impact level event(s) detected...");
-//			}
+			impact_detected = ACCEL_analyze_xyz(accel_data, impact_data);
+			
+			if(impact_detected)
+			{
+				++impact_count;
+				NRF_LOG_INFO("...Impact level event(s) detected...");
+				NRF_LOG_INFO("Impact Count: %d", impact_count);
+			}
 			
 			for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
 			{
@@ -197,7 +196,6 @@ int main(void)
 				}			
 				#endif
 			}
-			
 		  NRF_LOG_FLUSH();
 		}		
 		

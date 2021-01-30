@@ -93,9 +93,11 @@ uint32_t read_index = 0;
  * This function sends a one-byte write register command to the accelerometer via SPI
  * @param[in] register_command_t* cmd
  */
-static void accel_write_register(register_command_t* cmd)
+static void accel_write_register(uint8_t address, uint8_t value)
 {
-	memcpy(m_tx_buf, cmd, sizeof(register_command_t));
+	reg_command.address = address;
+	reg_command.value = value;
+	memcpy(m_tx_buf, &reg_command, sizeof(register_command_t));
 
 	spi_xfer_done = false;
 	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, sizeof(register_command_t), m_rx_buf, sizeof(register_command_t)));
@@ -112,12 +114,9 @@ static void accel_write_register(register_command_t* cmd)
  * @param[in] cmd: register_command_tpointer containing the desired register address
  * @param[out] Returns the value contained in the specified register
  */
-static uint8_t accel_read_register(register_command_t* cmd)
+static uint8_t accel_read_register(uint8_t address)
 {
-	cmd->address |= READ_BIT; 
-	cmd->value = 0xFF; // Insert dummy value to read during that SPI frame
-	
-	accel_write_register(cmd);
+	accel_write_register((address | READ_BIT), 0xFF);	// Insert dummy value to read during that SPI frame
 	
 	return m_rx_buf[1];
 }
@@ -128,30 +127,30 @@ static uint8_t accel_read_register(register_command_t* cmd)
  * @param[in] cmd: block_command_t pointer containing the start address, 
  * data buffer and buffer length for the block transmission
  */
-static void accel_write_block(block_command_t* cmd)
-{
-	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
-	{
-		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_write_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
-		return;
-	}
-	spi_xfer_done = false;
-	
-	m_tx_buf[0] = cmd->start_address | MS_BIT;
-	memcpy(&m_tx_buf[1], cmd->buffer, cmd->buffer_length);
-	
-	#ifdef SPI_DEBUG_INFO
-	NRF_LOG_INFO("Writing block to 0x%02X - 0x%02X:", cmd->start_address, cmd->start_address + cmd->buffer_length-1)
-	NRF_LOG_HEXDUMP_INFO(cmd->buffer, cmd->buffer_length);
-	#endif
-	
-	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, cmd->buffer_length+1, m_rx_buf, cmd->buffer_length+1));
-	
-	while (!spi_xfer_done) //Check for successful transfer
-	{
-		__WFE();
-	}
-}
+//static void accel_write_block(block_command_t* cmd)
+//{
+//	if(cmd->buffer_length >= SPI_BUFFER_LENGTH)
+//	{
+//		NRF_LOG_INFO("ERROR: Attempting to send too much data (%d) in accel_write_block()! (MAX %d)", cmd->buffer_length, SPI_BUFFER_LENGTH);
+//		return;
+//	}
+//	spi_xfer_done = false;
+//	
+//	m_tx_buf[0] = cmd->start_address | MS_BIT;
+//	memcpy(&m_tx_buf[1], cmd->buffer, cmd->buffer_length);
+//	
+//	#ifdef SPI_DEBUG_INFO
+//	NRF_LOG_INFO("Writing block to 0x%02X - 0x%02X:", cmd->start_address, cmd->start_address + cmd->buffer_length-1)
+//	NRF_LOG_HEXDUMP_INFO(cmd->buffer, cmd->buffer_length);
+//	#endif
+//	
+//	APP_ERROR_CHECK(nrf_drv_spi_transfer(&spi, m_tx_buf, cmd->buffer_length+1, m_rx_buf, cmd->buffer_length+1));
+//	
+//	while (!spi_xfer_done) //Check for successful transfer
+//	{
+//		__WFE();
+//	}
+//}
 
 /**
  * @brief Function reads a block to a range of addresses
@@ -190,70 +189,87 @@ static void accel_read_block(block_command_t* cmd)
  * This function checks if the FIFO buffer is empty, it resets the FIFO if true
  * @param[in] none
  */
-static bool accel_fifo_check(void)
-{
-	reg_command.address = FIFO_STATUS;
-	uint8_t fifo_empty_mask = FIFO_STATUS_ENT5 | FIFO_STATUS_ENT4 | FIFO_STATUS_ENT3 | FIFO_STATUS_ENT2 | FIFO_STATUS_ENT1 | FIFO_STATUS_ENT0;
-	if((accel_read_register(&reg_command) & fifo_empty_mask) == 0)
-	{
-		fifo_wtm_flag = 0;
-		return true;
-	}
-	return false;
-}
+//static bool accel_fifo_check(void)
+//{
+//	reg_command.address = FIFO_STATUS;
+//	uint8_t fifo_empty_mask = FIFO_STATUS_ENT5 | FIFO_STATUS_ENT4 | FIFO_STATUS_ENT3 | FIFO_STATUS_ENT2 | FIFO_STATUS_ENT1 | FIFO_STATUS_ENT0;
+//	if((accel_read_register(&reg_command) & fifo_empty_mask) == 0)
+//	{
+//		fifo_wtm_flag = 0;
+//		return true;
+//	}
+//	return false;
+//}
 
 /**
  * @brief Function sets the FIFO to bypass mode
  * This function writes the neccessary values to registers put the FIFO into bypass mode
  * @param[in] none
  */
-static void accel_fifo_set_bypass_mode(void)
-{
-	// Put the FIFO into bypass mode and clear the register
-	reg_command.address = FIFO_CTL;
-	reg_command.value = 0x00;
-	accel_write_register(&reg_command);	
-}
+//static void accel_fifo_set_bypass_mode(void)
+//{
+//	// Put the FIFO into bypass mode and clear the register
+//	reg_command.address = FIFO_CTL;
+//	reg_command.value = 0x00;
+//	accel_write_register(&reg_command);	
+//}
 
 /**
  * @brief Function sets the FIFO to fifo mode
  * This function writes the neccessary values to registers put the FIFO into fifo mode
  * @param[in] none
  */
-static void accel_fifo_set_fifo_mode(void)
-{
-	// Put the FIFO into fifo mode and set the fifo ctrl values
-	reg_command.address = FIFO_CTL;
-	reg_command.value = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
-	accel_write_register(&reg_command);	
-}
+//static void accel_fifo_set_fifo_mode(void)
+//{
+//	// Put the FIFO into fifo mode and set the fifo ctrl values
+//	reg_command.address = FIFO_CTL;
+//	reg_command.value = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
+//	accel_write_register(&reg_command);	
+//}
 
 /**
  * @brief Function enables the fifo interrupts
  * This function enables the fifo watermark interrupt bit of the INT_ENABLE register
  * @param[in] none
  */
-static bool accel_fifo_interrupt_enable(void)
-{
-	// Enable the FIFO watermark interrupt
-	uint8_t fifo_int_config_w = INT_ENABLE_WTM;
-	reg_command.address = INT_ENABLE;
-	reg_command.value = INT_ENABLE_WTM;
-	accel_write_register(&reg_command);
+//static bool accel_fifo_interrupt_enable(void)
+//{
+//	// Enable the FIFO watermark interrupt
+//	uint8_t fifo_int_config_w = INT_ENABLE_WTM;
+//	reg_command.address = INT_ENABLE;
+//	reg_command.value = INT_ENABLE_WTM;
+//	accel_write_register(&reg_command);
 
-	uint8_t fifo_int_config_r = accel_read_register(&reg_command);
+//	uint8_t fifo_int_config_r = accel_read_register(&reg_command);
 
-	if((fifo_int_config_w != fifo_int_config_r))
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("FIFO Interrupt Initialization failed!");
-		#endif
+//	if((fifo_int_config_w != fifo_int_config_r))
+//	{
+//		#ifdef ACCEL_DEBUG_INFO
+//		NRF_LOG_INFO("FIFO Interrupt Initialization failed!");
+//		#endif
 
-		return false;
-	}	
-	
-	return true;
-}
+//		return false;
+//	}
+//	
+//	// Map the FIFO watermark interrupt
+//	uint8_t fifo_int_map_w = INT1_MAP;
+//	reg_command.address = INT_MAP;
+//	reg_command.value = INT_ENABLE_WTM;
+//	accel_write_register(&reg_command);
+
+//	uint8_t fifo_int_map_r = accel_read_register(&reg_command);
+
+//	if((fifo_int_map_w != fifo_int_map_r))
+//	{
+//		#ifdef ACCEL_DEBUG_INFO
+//		NRF_LOG_INFO("FIFO Interrupt Initialization failed!");
+//		#endif
+
+//		return false;
+//	}	
+//	
+//	return true;
+//}
 
 /**
  * @brief Event handler for INT1 watermark interrupt initializes the accelerometer
@@ -263,6 +279,7 @@ static bool accel_fifo_interrupt_enable(void)
  */
 static void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
 {
+	//NRF_LOG_INFO("Watermark!");
 	fifo_wtm_flag = 1; // Set wtm_flag
 }
 
@@ -293,9 +310,7 @@ static void accel_pin_int_init(void)
  */
 static bool accel_probe(void)
 {
-	reg_command.address = DEVID;
-	
-	uint8_t reg_val = accel_read_register(&reg_command);
+	uint8_t reg_val = accel_read_register(DEVID);
 	
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accel probe value: 0x%x",reg_val);
@@ -375,40 +390,9 @@ void ACCEL_read_xyz(accel_xyz_data_t* data)
 	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
 	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
 	
-//	uint16_t negative_bit_mask = 1 << (accel_inst.resolution - 1);
-//		
-//	if((x_out_temp & negative_bit_mask) == negative_bit_mask) // If x_out is (-)
-//	{
-//		data->out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-//	}
-//	else
-//	{
-//		data->out_x = SENSITIVITY * x_out_temp;
-//	}
-//	
-//	if((y_out_temp & negative_bit_mask) == negative_bit_mask) // If y_out is (-)
-//	{
-//		data->out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-//	}
-//	else
-//	{
-//		data->out_y = SENSITIVITY * y_out_temp;
-//	}
-//	
-//	if((z_out_temp & negative_bit_mask) == negative_bit_mask) // If z_out is (-)
-//	{
-//		data->out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-//	}
-//	else
-//	{
-//		data->out_z = SENSITIVITY * z_out_temp;
-//	}
-	
-//	if(accel_fifo_check())
-//	{
-//		accel_fifo_set_bypass_mode();
-//		accel_fifo_set_fifo_mode();
-//	}
+	data->out_x = SENSITIVITY * (float)x_out_temp;
+	data->out_y = SENSITIVITY * (float)y_out_temp;
+	data->out_z = SENSITIVITY * (float)z_out_temp;
 }
 
 /**
@@ -438,35 +422,11 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 		int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
 		int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
 		
-		uint16_t mask = 1 << (accel_inst.resolution - 1);
-			
-		if((x_out_temp & mask) == mask) // If x_out is (-)
-		{
-			data[i].out_x = SENSITIVITY * -((~x_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-		}
-		else
-			data[i].out_x = SENSITIVITY * x_out_temp;
-		
-		if((y_out_temp & mask) == mask) // If y_out is (-)
-		{
-			data[i].out_y = SENSITIVITY * -((~y_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-		}
-		else
-			data[i].out_y = SENSITIVITY * y_out_temp;
-		
-		if((z_out_temp & mask) == mask) // If z_out is (-)
-		{
-			data[i].out_z = SENSITIVITY * -((~z_out_temp + 1) & ((1 << accel_inst.resolution) - 1));
-		}
-		else
-			data[i].out_z = SENSITIVITY * z_out_temp;
+		data[i].out_x = SENSITIVITY * (float)x_out_temp;
+		data[i].out_y = SENSITIVITY * (float)y_out_temp;
+		data[i].out_z = SENSITIVITY * (float)z_out_temp;
 	}
-	
-//	if(accel_fifo_check())
-//	{
-//		accel_fifo_set_bypass_mode();
-//		accel_fifo_set_fifo_mode();
-//	}
+	fifo_wtm_flag = 0;	//reset watermark flag after reading data
 }
 
 bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
@@ -491,31 +451,31 @@ bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
  * This function writes the neccessary values to the desired FIFO_CTL register to initialize the FIFO
  * @param[in] none
  */
-bool ACCEL_fifo_init(void)
-{
-	// Do not think this is needed anymore. But also may not be a bad idea 
-	accel_fifo_set_bypass_mode(); // Set bypass mode to clear fifo buffer of any existing samples
-	nrf_delay_ms(10);
+//bool ACCEL_fifo_init(void)
+//{
+//	// Do not think this is needed anymore. But also may not be a bad idea 
+//	accel_fifo_set_bypass_mode(); // Set bypass mode to clear fifo buffer of any existing samples
+//	nrf_delay_ms(10);
 
-	// Initialize the FIFO
-	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
-	reg_command.address = FIFO_CTL;
-	reg_command.value = fifo_config_w;
-	accel_write_register(&reg_command);
+//	// Initialize the FIFO
+//	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
+//	reg_command.address = FIFO_CTL;
+//	reg_command.value = fifo_config_w;
+//	accel_write_register(&reg_command);
 
-	uint8_t fifo_config_r = accel_read_register(&reg_command);
+//	uint8_t fifo_config_r = accel_read_register(&reg_command);
 
-	if((fifo_config_w != fifo_config_r) && accel_fifo_interrupt_enable())
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("FIFO Initialization failed!");
-		#endif
+//	if((fifo_config_w != fifo_config_r) && accel_fifo_interrupt_enable())
+//	{
+//		#ifdef ACCEL_DEBUG_INFO
+//		NRF_LOG_INFO("FIFO Initialization failed!");
+//		#endif
 
-		return false;
-	}	
-	
-	return true;
-}
+//		return false;
+//	}	
+//	
+//	return true;
+//}
 
 /**
  * @brief Function initializes the accelerometer
@@ -541,35 +501,31 @@ bool ACCEL_init(void)
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializing...");
 	#endif
+
+	// Begin accelerometer initialization
+	accel_write_register(DATA_FORMAT, DATA_FORMAT_RIGHT_JUSTIFIED);	//set data format
+	accel_write_register(BW_RATE, DATA_RATE_400HZ);									//start data rate
+	accel_write_register(INT_MAP, INT1_MAP_WTM);										//set interrupt map
+	accel_write_register(INT_ENABLE, INT_ENABLE_WTM);								//start enable watermark interrupt
 	
-	//set data rate
-	reg_command.address = BW_RATE;
-	reg_command.value = DATA_RATE_1600HZ;
-	accel_write_register(&reg_command);
-	//start measuring
-	reg_command.address = POWER_CTL;
-	reg_command.value = POWER_CTL_MEASURE;
-	accel_write_register(&reg_command);
+	//initialize the fifo
+	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
+	accel_write_register(FIFO_CTL, fifo_config_w);
 
+	uint8_t fifo_config_r = accel_read_register(FIFO_CTL);
 
-	#ifdef ACCEL_DEBUG_INFO
-	NRF_LOG_INFO("Verifying...");
-	#endif
+	if(fifo_config_w != fifo_config_r)
+	{
+		#ifdef ACCEL_DEBUG_INFO
+		NRF_LOG_INFO("FIFO Initialization failed!");
+		#endif
 
-//	control_block_t config_block_r = {0};
-//	block_command.start_address = CTRL_REG0;
-//	block_command.buffer = (uint8_t*)&config_block_r;
-//	block_command.buffer_length = sizeof(config_block_r);
-//	accel_read_block(&block_command);
-//	
-//	if(memcmp(&config_block_r, &config_block_w, sizeof(control_block_t)) != 0)
-//	{
-//		#ifdef ACCEL_DEBUG_INFO
-//		NRF_LOG_INFO("Accelerometer Initialization failed!");
-//		#endif
+		return false;
+	}	
+	
+	//start measuring acceleration
+	accel_write_register(POWER_CTL, POWER_CTL_MEASURE);
 
-//		return false;
-//	}
 
 	#ifdef ACCEL_DEBUG_INFO
 	NRF_LOG_INFO("Accelerometer Initializated.");

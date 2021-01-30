@@ -41,7 +41,7 @@ and communicating over ANT wireless protocol
 #define APP_ANT_OBSERVER_PRIO           1                       /**< Application's ANT observer priority. You shouldn't need to modify this value. */
 
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
-static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
+//static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
 
 extern volatile uint8_t impact_count; // Variable to hold the overall impact count of this device
 
