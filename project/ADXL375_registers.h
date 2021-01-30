@@ -89,6 +89,8 @@ enum {
 #define DATA_RATE_1600HZ ((uint8_t) 0x0E)
 #define DATA_RATE_800HZ  ((uint8_t) 0x0D)
 #define DATA_RATE_400HZ  ((uint8_t) 0x0C)
+#define DATA_RATE_25HZ	 ((uint8_t) 0x08)
+#define DATA_RATE_12_5HZ ((uint8_t) 0x07)
 
 #define POWER_CTL_MEASURE ((uint8_t) (1 << 3))
 
@@ -107,6 +109,9 @@ enum {
 #define FIFO_STATUS_ENT5 ((uint8_t) (1 << 5))
 
 #define INT_ENABLE_WTM ((uint8_t) (1 << 1))
+#define INT1_MAP_WTM ((uint8_t) (0 << 1))
+
+#define DATA_FORMAT_RIGHT_JUSTIFIED ((uint8_t) 0x0B)
 
 #define INT1_PIN ((nrf_drv_gpiote_pin_t) 7)
 
