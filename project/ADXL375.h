@@ -38,7 +38,7 @@ and communication with the LIS2DH12 accelerometer module
 #define ACCEL_FIFO_LENGTH (32)
 #define BYTES_PER_DATA_SAMPLE (6)
 
-#define IMPACT_THRESHOLD ((float) 2) // The threshold in g's that if surpassed indicates that an impact level event has occured
+#define IMPACT_THRESHOLD ((float) 10) // The threshold in g's that if surpassed indicates that an impact level event has occured
 /*******************************************************************************
 															     TYPEDEFS
 *******************************************************************************/
