@@ -390,9 +390,9 @@ void ACCEL_read_xyz(accel_xyz_data_t* data)
 	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
 	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
 	
-	data->out_x = SENSITIVITY * (float)x_out_temp;
-	data->out_y = SENSITIVITY * (float)y_out_temp;
-	data->out_z = SENSITIVITY * (float)z_out_temp;
+	data->out_x = SENSITIVITY_LE_800Hz * (float)x_out_temp;
+	data->out_y = SENSITIVITY_LE_800Hz * (float)y_out_temp;
+	data->out_z = SENSITIVITY_LE_800Hz * (float)z_out_temp;
 }
 
 /**
@@ -422,9 +422,9 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 		int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
 		int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
 		
-		data[i].out_x = SENSITIVITY * (float)x_out_temp;
-		data[i].out_y = SENSITIVITY * (float)y_out_temp;
-		data[i].out_z = SENSITIVITY * (float)z_out_temp;
+		data[i].out_x = SENSITIVITY_LE_800Hz * (float)x_out_temp;
+		data[i].out_y = SENSITIVITY_LE_800Hz * (float)y_out_temp;
+		data[i].out_z = SENSITIVITY_LE_800Hz * (float)z_out_temp;
 	}
 	fifo_wtm_flag = 0;	//reset watermark flag after reading data
 }

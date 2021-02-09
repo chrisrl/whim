@@ -28,7 +28,8 @@ and communication with the LIS2DH12 accelerometer module
 // The unit of the variable is in g/LSB, where digit is the two's compliment value output by the X, Y, and Z registers.
 // More information on the sensitivity of the accelerometer device can be found in Table 1. of the device datasheet.
 // https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL375.pdf
-#define SENSITIVITY ((float) 0.049)
+#define SENSITIVITY_LE_800Hz ((float) 0.049)
+#define SENSITIVITY_GE_1600Hz ((float) 0.098)
 
 // This value represents the number of bits that the xyz data are stored in. I.e, when the X_OUT_L & X_OUT_H registers are concatenated, they are stored in a uint16_t variable.
 // Therefore 16 bits is used to store a value read from any of the X, Y, and Z  registers
