@@ -71,6 +71,7 @@
 #include "nrf_pwr_mgmt.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_ant.h"
+#include "nrf_fstorage_sd.h"
 
 // misc includes
 #include "app_error.h"
@@ -83,16 +84,17 @@
 // whim includes
 #include "ANT.h"
 #include "ADXL375.h"
-#include "ADXL375_registers.h"
+#include "fstorage_manager.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
-#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
-//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+//#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
+#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
 extern volatile uint8_t fifo_wtm_flag;
+extern volatile uint8_t impact_reset_flag;
 extern uint32_t read_index;
 
 static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
@@ -104,7 +106,7 @@ static char disp_string[100]; // String used to display desired output data
 #endif
 
 volatile uint8_t impact_count = 0; // Variable to hold the overall impact count of this device
-
+extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
@@ -137,7 +139,6 @@ static void utils_setup(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
@@ -150,7 +151,9 @@ int main(void)
 	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
-	
+		
+	fstorage_init();
+
 	ANT_init();
 	
 	if(!ACCEL_init())
@@ -160,11 +163,13 @@ int main(void)
 		nrf_delay_ms(100);
 		return 0;
 	}
+
+	/* Reading stored impact value from flash */
+	fstorage_read_impact();
 	
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
-
 	while (1)
 	{
 		if(fifo_wtm_flag == 1)
@@ -177,6 +182,7 @@ int main(void)
 			if(impact_detected)
 			{
 				++impact_count;
+				fstorage_write_impact();
 				NRF_LOG_INFO("...Impact level event(s) detected...");
 				NRF_LOG_INFO("Impact Count: %d", impact_count);
 			}
@@ -207,10 +213,17 @@ int main(void)
 		  NRF_LOG_FLUSH();
 		}		
 		
+		if(impact_reset_flag == 1)
+		{
+			/* Reset Impact count to 0 */
+			impact_count = 0;
+			fstorage_write_impact();
+			NRF_LOG_INFO("Impact reset.");
+			
+			/* Reset impact reset flag */
+			impact_reset_flag = 0;
+		}
+		
     nrf_pwr_mgmt_run();
-
-	  //bsp_board_led_invert(BSP_BOARD_LED_3);
-		//nrf_delay_ms(1000);
 	}
 }
-
