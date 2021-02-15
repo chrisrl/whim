@@ -47,16 +47,6 @@ typedef struct {
 	float out_y;
 	float out_z;
 } accel_xyz_data_t;
-//typedef struct {
-//	int out_x;
-//	int out_y;
-//	int out_z;
-//} accel_xyz_data_t;
-
-//typedef struct {
-//	float accel_magnitude;
-//	bool	impact_event;
-//} impact_data_t;
 
 enum {
 	SCALE_2G = 2,
@@ -90,7 +80,4 @@ void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
 void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
 bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
 bool ACCEL_init(void);
-bool ACCEL_fifo_init(void);
-void ACCEL_pwrdn(void);
-
 #endif /*ADXL375_H*/
