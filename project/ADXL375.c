@@ -313,6 +313,7 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 	fifo_wtm_flag = 0;	//reset watermark flag after reading data
 }
 
+
 bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
 {
 	uint8_t batch_flag = 0; // This flag is used to indicate whether an impact has been detected in this batch of data
@@ -334,7 +335,7 @@ bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
 /**
  * @brief Function initializes the accelerometer
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
-* @param[in] accel_inst: accel instance
+ * @param[in] accel_inst: accel instance
  */
 bool ACCEL_init(void)
 {

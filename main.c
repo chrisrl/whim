@@ -111,12 +111,9 @@ extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
 															      PROCEDURES
 *******************************************************************************/
 
-//static void init_leds(void)
-//{
-//	
-//}
 
-/**@brief Function for the Timer and BSP initialization.
+/**
+ * @brief Function for the Timer and BSP initialization.
  */
 static void utils_setup(void)
 {
@@ -138,10 +135,6 @@ static void utils_setup(void)
 		NRF_LOG_INFO("%d", err_code);
     APP_ERROR_CHECK(err_code);
 }
-
-/*******************************************************************************
-															      PROCEDURES
-*******************************************************************************/
 
 
 int main(void)
