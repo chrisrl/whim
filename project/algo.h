@@ -29,5 +29,5 @@ implementation
 *******************************************************************************/
 
 bool ALGO_threshold_check(accel_xyz_data_t data_in[], float impact_data[]);
-uint16_t ALGO_impact_score(accel_xyz_data_t data_in[], float impact_data[]);
+float ALGO_impact_score(accel_xyz_data_t data_in[]);
 #endif /*ALGO_H*/
