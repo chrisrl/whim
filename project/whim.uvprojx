@@ -443,6 +443,16 @@
               <FileType>5</FileType>
               <FilePath>.\algo.h</FilePath>
             </File>
+            <File>
+              <FileName>whim_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\whim_queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>whim_queue.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\whim_queue.h</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -607,11 +617,6 @@
               <FileName>nrf_atfifo.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\components\libraries\atomic_fifo\nrf_atfifo.c</FilePath>
-            </File>
-            <File>
-              <FileName>nrf_queue.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>..\..\components\libraries\queue\nrf_queue.c</FilePath>
             </File>
           </Files>
         </Group>

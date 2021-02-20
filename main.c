@@ -85,13 +85,15 @@
 #include "ANT.h"
 #include "ADXL375.h"
 #include "fstorage_manager.h"
+#include "whim_queue.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
 //#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
-#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+WHIM_QUEUE_DEF(m_byte_queue, 16, WHIM_QUEUE_MODE_OVERFLOW);
 
 extern volatile uint8_t fifo_wtm_flag;
 extern volatile uint8_t impact_reset_flag;
@@ -107,6 +109,7 @@ static char disp_string[100]; // String used to display desired output data
 
 volatile uint8_t impact_count = 0; // Variable to hold the overall impact count of this device
 extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
+
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
@@ -144,9 +147,7 @@ int main(void)
 	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
-		
 	fstorage_init();
-
 	ANT_init();
 	
 	if(!ACCEL_init())
@@ -156,6 +157,17 @@ int main(void)
 		nrf_delay_ms(100);
 		return 0;
 	}
+
+//	double sum;
+//	float data[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
+//	ret_code_t err_code = whim_queue_write(&m_byte_queue, data, 16);
+//	APP_ERROR_CHECK(err_code);
+//	char disp_string[100];
+//	err_code = whim_queue_integrate(&m_byte_queue,&sum,0.51);
+//	APP_ERROR_CHECK(err_code);
+//	sprintf(disp_string, "Integration Output %.2f", sum);
+//	NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+//	NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
 
 	/* Reading stored impact value from flash */
 	fstorage_read_impact();
