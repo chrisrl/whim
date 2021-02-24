@@ -86,6 +86,7 @@
 #include "ADXL375.h"
 #include "fstorage_manager.h"
 #include "whim_queue.h"
+#include "algo.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
@@ -93,15 +94,18 @@
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
 //#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
 //#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
-WHIM_QUEUE_DEF(m_byte_queue, 16, WHIM_QUEUE_MODE_OVERFLOW);
+#define DISPLAY_IMPACT_SCORE
 
 extern volatile uint8_t fifo_wtm_flag;
 extern volatile uint8_t impact_reset_flag;
+extern uint8_t impact_score_flag;
 extern uint32_t read_index;
 
 static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
 static float impact_data[ACCEL_FIFO_LENGTH]; // One fifo worth of analyzed data
 static bool impact_detected = false; // Boolean used to indicate if an impact has occured
+static float impact_score = 0; // HIC impact score 
+static float impact_linear_acc = 0; // Peak linear acceleration
 
 #ifdef DISPLAY_ACCEL_AXIS_DATA
 static char disp_string[100]; // String used to display desired output data
@@ -158,17 +162,6 @@ int main(void)
 		return 0;
 	}
 
-//	double sum;
-//	float data[] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};
-//	ret_code_t err_code = whim_queue_write(&m_byte_queue, data, 16);
-//	APP_ERROR_CHECK(err_code);
-//	char disp_string[100];
-//	err_code = whim_queue_integrate(&m_byte_queue,&sum,0.51);
-//	APP_ERROR_CHECK(err_code);
-//	sprintf(disp_string, "Integration Output %.2f", sum);
-//	NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
-//	NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
-
 	/* Reading stored impact value from flash */
 	fstorage_read_impact();
 	
@@ -179,17 +172,25 @@ int main(void)
 	{
 		if(fifo_wtm_flag == 1)
 		{
-			//bsp_board_led_invert(BSP_BOARD_LED_0);
 			ACCEL_read_xyz_fifo(accel_data);
-			impact_detected = ACCEL_analyze_xyz(accel_data, impact_data);
+			impact_score = ALGO_get_impact_score(accel_data, impact_data, &impact_linear_acc);
 			
-			#ifndef DISPLAY_ACCEL_GFORCE_DATA
-			if(impact_detected)
+//			#ifdef DISPLAY_ACCEL_GFORCE_DATA
+//			if(impact_detected)
+//			{
+//				++impact_count;
+//				fstorage_write_impact();
+//				NRF_LOG_INFO("...Impact level event(s) detected...");
+//				NRF_LOG_INFO("Impact Count: %d", impact_count);
+//			}
+//			#endif
+			
+			#ifdef DISPLAY_IMPACT_SCORE
+			if(impact_score > IMPACT_SCORE_THRESH && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
 			{
-				++impact_count;
-				fstorage_write_impact();
-				NRF_LOG_INFO("...Impact level event(s) detected...");
-				NRF_LOG_INFO("Impact Count: %d", impact_count);
+				NRF_LOG_INFO("...Impact level event detected...");
+				NRF_LOG_INFO("HIC Score: "NRF_LOG_FLOAT_MARKER " Peak LA: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_score), NRF_LOG_FLOAT(impact_linear_acc));
+				impact_score_flag = 1;
 			}
 			#endif
 			

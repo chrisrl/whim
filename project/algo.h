@@ -18,16 +18,13 @@ implementation
 																	  MACROS
 *******************************************************************************/
 #define QUEUE_CAPACITY (16) // Buffer size for the FIFO samples used 
-
-/*******************************************************************************
-															     TYPEDEFS
-*******************************************************************************/
-
+#define SAMPLE_DX ((float) 0.00125) // Time delta consecutive samples in the queue
+#define IMPACT_SCORE_THRESH ((float) 10)
+#define HIC_TIME_INTERVAL (0.02) // Approx. 20ms time interval for HIC score
 	
 /*******************************************************************************
 															   PROCEDURES
 *******************************************************************************/
 
-bool ALGO_threshold_check(accel_xyz_data_t data_in[], float impact_data[]);
-float ALGO_impact_score(accel_xyz_data_t data_in[]);
+float ALGO_get_impact_score(accel_xyz_data_t data_in[], float impact_mag_data[], float *linear_acc);
 #endif /*ALGO_H*/
