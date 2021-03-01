@@ -22,10 +22,12 @@ Flash Storage (fstorage).
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-#define DISPLAY_FSTORAGE_INFO // Uncomment if the fstorage info needs to be displayed
+//#define DISPLAY_FSTORAGE_INFO // Uncomment if the fstorage info needs to be displayed
 
 nrf_fstorage_api_t *p_fs_api;
-extern volatile uint32_t impact_count;
+extern volatile uint8_t impact_count;
+extern volatile uint16_t impact_score;
+extern volatile uint16_t impact_score_max;
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
@@ -40,8 +42,8 @@ NRF_FSTORAGE_DEF(nrf_fstorage_t fstorage) =
      * You must set these manually, even at runtime, before nrf_fstorage_init() is called.
      * The function nrf5_flash_end_addr_get() can be used to retrieve the last address on the
      * last page of flash available to write data. */
-    .start_addr = 0x7f000,
-    .end_addr   = 0x7ffff,
+    .start_addr = 0x7d000,
+    .end_addr   = 0x80000,
 };
 
 static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
@@ -102,46 +104,80 @@ void fstorage_init(void)
 }
 
 /**
- * @brief Function writes current impact count to flash
- * This function overwrites in flash the current value of impact_count.
+ * @brief Function writes impact data to flash
+ * This function overwrites in flash respective impact data values.
  */
 void fstorage_write_impact(void)
 {
 	ret_code_t rc;
-	uint32_t impact_curr;
+	uint32_t store_data;
 	 
-	/* Erase single flash page */
-	rc = nrf_fstorage_erase(&fstorage, 0x7f000, 1, NULL);
+	/* Erase single flash page at each address */
+	rc = nrf_fstorage_erase(&fstorage, 0x7d000, 1, NULL);
 	APP_ERROR_CHECK(rc);
 
 	wait_for_flash_ready(&fstorage);
 	
-	/* Copy impact_count to meet program size requirements */
-	impact_curr = impact_count;
-				
-	/* Writing to flash. */
-	rc = nrf_fstorage_write(&fstorage, 0x7f000, (const void *)&impact_curr, sizeof(impact_curr), NULL);
+	rc = nrf_fstorage_erase(&fstorage, 0x7e000, 1, NULL);
 	APP_ERROR_CHECK(rc);
+	
+	wait_for_flash_ready(&fstorage);
 
+	rc = nrf_fstorage_erase(&fstorage, 0x7f000, 1, NULL);
+	APP_ERROR_CHECK(rc);
+	
+	wait_for_flash_ready(&fstorage);
+
+	/* Copy impact_count to meet program size requirements */
+	store_data = impact_count;
+				
+	/* Writing to impact count to flash. */
+	rc = nrf_fstorage_write(&fstorage, 0x7d000, &store_data, sizeof(store_data), NULL);
+	APP_ERROR_CHECK(rc);
+	
+	wait_for_flash_ready(&fstorage);
+		
+	/* Copy impact_score to meet program size requirements */
+	store_data = impact_score;
+	
+	rc = nrf_fstorage_write(&fstorage, 0x7e000, &store_data, sizeof(store_data), NULL);
+	APP_ERROR_CHECK(rc);
+	
+	wait_for_flash_ready(&fstorage);
+	
+	/* Copy impact_score to meet program size requirements */
+	store_data = impact_score_max;
+	
+	rc = nrf_fstorage_write(&fstorage, 0x7f000, &store_data, sizeof(store_data), NULL);
+	APP_ERROR_CHECK(rc);
+	
 	wait_for_flash_ready(&fstorage);
 }
 
 /**
- * @brief Function reads current impact count from flash
- * This function reads flash storage and stores the value in impact_count.
+ * @brief Function reads impact data from flash
+ * This function reads flash storage and updates the respective impact data values.
  */
 void fstorage_read_impact(void)
 {
 	ret_code_t rc;
-	uint32_t impact_curr;
-
-	/* Copy impact_count to meet program size requirements */
+	uint32_t read_data;
 	
 	/* Reading stored impact value from flash */
-	rc = nrf_fstorage_read(&fstorage, 0x7f000, (void *)&impact_curr, sizeof(impact_curr));
+	rc = nrf_fstorage_read(&fstorage, 0x7d000, &read_data, sizeof(read_data));
 	APP_ERROR_CHECK(rc);
 	
-	impact_count = impact_curr;
+	impact_count = read_data;
+	
+	rc = nrf_fstorage_read(&fstorage, 0x7e000, (void *)&read_data, sizeof(read_data));
+	APP_ERROR_CHECK(rc);
+	
+	impact_score = read_data;
+	
+	rc = nrf_fstorage_read(&fstorage, 0x7f000, (void *)&read_data, sizeof(read_data));
+	APP_ERROR_CHECK(rc);
+	
+	impact_score_max = read_data;
 	
 	wait_for_flash_ready(&fstorage);
 }

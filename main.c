@@ -110,7 +110,8 @@ static char disp_string[100];// String used to display desired output data
 #endif
 
 volatile uint8_t impact_count = 0; // Variable to hold the overall impact count of this device
-volatile uint16_t impact_score = 0; // Variable to hold the most recent HIC impact score 
+volatile uint16_t impact_score = 0; // Variable to hold the most recent HIC impact score
+volatile uint16_t impact_score_max = 0; // Variable to hold the largest HIC
 static float impact_linear_acc = 0; // Variable to hold the most recent peak linear acceleration
 extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
 
@@ -177,12 +178,17 @@ int main(void)
 			
 			if(impact_score > IMPACT_SCORE_THRESH_INT && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
 			{
+				if(impact_score > impact_score_max)
+				{
+					impact_score_max = impact_score;
+				}
 				++impact_count;
 			  fstorage_write_impact();
 				
 				#ifdef DISPLAY_IMPACT_SCORE
 					NRF_LOG_INFO("...Impact level event detected...");
 					NRF_LOG_INFO("HIC Score: %u --- Peak LA: " NRF_LOG_FLOAT_MARKER, impact_score, NRF_LOG_FLOAT(impact_linear_acc));
+					NRF_LOG_INFO("Max HIC Score: %d", impact_score_max);
 					NRF_LOG_INFO("Impact Count: %d", impact_count);
 					NRF_LOG_FLUSH();
 			  #endif
