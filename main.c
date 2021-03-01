@@ -91,10 +91,11 @@
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
+#define DISPLAY_IMPACT_SCORE // Uncomment to display the impact score and impact count
+//#define DISPLAY_FIFO_DATA // Uncomment to use any of the options below
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
 //#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
 //#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
-#define DISPLAY_IMPACT_SCORE
 
 extern volatile uint8_t fifo_wtm_flag;
 extern volatile uint8_t impact_reset_flag;
@@ -103,15 +104,14 @@ extern uint32_t read_index;
 
 static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
 static float impact_data[ACCEL_FIFO_LENGTH]; // One fifo worth of analyzed data
-static bool impact_detected = false; // Boolean used to indicate if an impact has occured
-static float impact_score = 0; // HIC impact score 
-static float impact_linear_acc = 0; // Peak linear acceleration
 
 #ifdef DISPLAY_ACCEL_AXIS_DATA
-static char disp_string[100]; // String used to display desired output data
+static char disp_string[100];// String used to display desired output data
 #endif
 
 volatile uint8_t impact_count = 0; // Variable to hold the overall impact count of this device
+volatile uint16_t impact_score = 0; // Variable to hold the most recent HIC impact score 
+static float impact_linear_acc = 0; // Variable to hold the most recent peak linear acceleration
 extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
 
 /*******************************************************************************
@@ -173,49 +173,48 @@ int main(void)
 		if(fifo_wtm_flag == 1)
 		{
 			ACCEL_read_xyz_fifo(accel_data);
-			impact_score = ALGO_get_impact_score(accel_data, impact_data, &impact_linear_acc);
+			impact_score = (uint16_t) ALGO_get_impact_score(accel_data, impact_data, &impact_linear_acc);
 			
-//			#ifdef DISPLAY_ACCEL_GFORCE_DATA
-//			if(impact_detected)
-//			{
-//				++impact_count;
-//				fstorage_write_impact();
-//				NRF_LOG_INFO("...Impact level event(s) detected...");
-//				NRF_LOG_INFO("Impact Count: %d", impact_count);
-//			}
-//			#endif
-			
-			#ifdef DISPLAY_IMPACT_SCORE
-			if(impact_score > IMPACT_SCORE_THRESH && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
+			if(impact_score > IMPACT_SCORE_THRESH_INT && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
 			{
-				NRF_LOG_INFO("...Impact level event detected...");
-				NRF_LOG_INFO("HIC Score: "NRF_LOG_FLOAT_MARKER " Peak LA: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_score), NRF_LOG_FLOAT(impact_linear_acc));
-				impact_score_flag = 1;
-			}
-			#endif
-			
-			for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
-			{
-			  #ifdef DISPLAY_ACCEL_AXIS_DATA
-			    sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[i].out_x, accel_data[i].out_y, accel_data[i].out_z);
-				  NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
-				  NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
+				++impact_count;
+			  fstorage_write_impact();
+				
+				#ifdef DISPLAY_IMPACT_SCORE
+					NRF_LOG_INFO("...Impact level event detected...");
+					NRF_LOG_INFO("HIC Score: %u --- Peak LA: " NRF_LOG_FLOAT_MARKER, impact_score, NRF_LOG_FLOAT(impact_linear_acc));
+					NRF_LOG_INFO("Impact Count: %d", impact_count);
+					NRF_LOG_FLUSH();
 			  #endif
 				
-				#ifdef DISPLAY_ACCEL_GFORCE_DATA
-				NRF_LOG_INFO("G-Force Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
-				NRF_LOG_FLUSH();	
-				#endif
-				
-				#ifdef DISPLAY_IMPACT_DATA
-				//TODO throw some printy bois in here
-				if(impact_data[i] > IMPACT_THRESHOLD)
-				{
-					NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
-					NRF_LOG_FLUSH();	
-				}			
-				#endif
+			  impact_score_flag = 1;		
 			}
+			
+			#ifdef DISPLAY_FIFO_DATA
+				for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
+				{
+					#ifdef DISPLAY_ACCEL_AXIS_DATA
+						sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[i].out_x, accel_data[i].out_y, accel_data[i].out_z);
+						NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+						NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
+					#endif
+					
+					#ifdef DISPLAY_ACCEL_GFORCE_DATA
+					NRF_LOG_INFO("G-Force Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
+					NRF_LOG_FLUSH();	
+					#endif
+					
+					#ifdef DISPLAY_IMPACT_DATA
+					//TODO throw some printy bois in here
+					if(impact_data[i] > IMPACT_THRESHOLD)
+					{
+						NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
+						NRF_LOG_FLUSH();	
+					}			
+					#endif
+				}
+			#endif
+			
 		  NRF_LOG_FLUSH();
 		}		
 		

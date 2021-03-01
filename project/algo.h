@@ -19,7 +19,8 @@ implementation
 *******************************************************************************/
 #define QUEUE_CAPACITY (16) // Buffer size for the FIFO samples used 
 #define SAMPLE_DX ((float) 0.00125) // Time delta consecutive samples in the queue
-#define IMPACT_SCORE_THRESH ((float) 10)
+#define IMPACT_SCORE_THRESH_FLOAT ((float) 10)
+#define IMPACT_SCORE_THRESH_INT ((uint16_t) 10)
 #define HIC_TIME_INTERVAL (0.02) // Approx. 20ms time interval for HIC score
 	
 /*******************************************************************************

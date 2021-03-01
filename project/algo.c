@@ -68,7 +68,7 @@ float ALGO_get_impact_score(accel_xyz_data_t data_in[], float impact_mag_data[],
 		
 		curr_score = pow((1/HIC_TIME_INTERVAL)*curr_score, 2.5) * HIC_TIME_INTERVAL;
 		
-		if(curr_score < IMPACT_SCORE_THRESH)
+		if(curr_score < IMPACT_SCORE_THRESH_FLOAT)
 			impact_score_flag = 0;
 		
 		if(!impact_score_flag)
