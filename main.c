@@ -110,7 +110,8 @@ static char disp_string[100];// String used to display desired output data
 #endif
 
 volatile uint8_t impact_count = 0; // Variable to hold the overall impact count of this device
-volatile uint16_t impact_score = 0; // Variable to hold the most recent HIC impact score
+volatile uint16_t impact_score = 0; // Temporary variable to hold the most recent HIC impact score
+volatile uint16_t impact_score_transmitted = 0; // Variable to hold the most recent HIC impact score that is transmitted
 volatile uint16_t impact_score_max = 0; // Variable to hold the largest HIC
 static float impact_linear_acc = 0; // Variable to hold the most recent peak linear acceleration
 extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
@@ -177,7 +178,9 @@ int main(void)
 			impact_score = (uint16_t) ALGO_get_impact_score(accel_data, impact_data, &impact_linear_acc);
 			
 			if(impact_score > IMPACT_SCORE_THRESH_INT && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
-			{
+			{ 
+				impact_score_transmitted = impact_score;
+				
 				if(impact_score > impact_score_max)
 				{
 					impact_score_max = impact_score;
@@ -228,6 +231,9 @@ int main(void)
 		{
 			/* Reset Impact count to 0 */
 			impact_count = 0;
+			impact_score_transmitted = 0;
+			impact_score_max = 0; 
+		
 			fstorage_write_impact();
 			NRF_LOG_INFO("Impact reset.");
 			

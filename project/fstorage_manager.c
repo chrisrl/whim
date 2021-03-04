@@ -26,7 +26,7 @@ Flash Storage (fstorage).
 
 nrf_fstorage_api_t *p_fs_api;
 extern volatile uint8_t impact_count;
-extern volatile uint16_t impact_score;
+extern volatile uint16_t impact_score_transmitted;
 extern volatile uint16_t impact_score_max;
 /*******************************************************************************
 															      PROCEDURES
@@ -138,7 +138,7 @@ void fstorage_write_impact(void)
 	wait_for_flash_ready(&fstorage);
 		
 	/* Copy impact_score to meet program size requirements */
-	store_data = impact_score;
+	store_data = impact_score_transmitted;
 	
 	rc = nrf_fstorage_write(&fstorage, 0x7e000, &store_data, sizeof(store_data), NULL);
 	APP_ERROR_CHECK(rc);
@@ -172,7 +172,7 @@ void fstorage_read_impact(void)
 	rc = nrf_fstorage_read(&fstorage, 0x7e000, (void *)&read_data, sizeof(read_data));
 	APP_ERROR_CHECK(rc);
 	
-	impact_score = read_data;
+	impact_score_transmitted = read_data;
 	
 	rc = nrf_fstorage_read(&fstorage, 0x7f000, (void *)&read_data, sizeof(read_data));
 	APP_ERROR_CHECK(rc);

@@ -50,6 +50,9 @@ static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary
 volatile uint8_t impact_reset_flag = 0;
 
 extern volatile uint8_t impact_count; // Variable to hold the overall impact count of this device
+extern volatile uint16_t impact_score ; // Variable to hold the most recent HIC impact score
+extern volatile uint16_t impact_score_transmitted; 
+extern volatile uint16_t impact_score_max; // Variable to hold the largest HIC
 extern nrf_fstorage_t* p_fs_api; // Pointer to the fstorage instance
 /*******************************************************************************
 															    PROCEDURES
@@ -67,10 +70,10 @@ static void ant_handle_transmit()
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
 	m_broadcast_data[1] = impact_count;
-	m_broadcast_data[2] = 0;
-	m_broadcast_data[3] = 0;
-	m_broadcast_data[4] = 0;
-	m_broadcast_data[5] = 0;
+	m_broadcast_data[2] = 0xff00 & impact_score_max;
+	m_broadcast_data[3] = 0x00ff & impact_score_max;
+	m_broadcast_data[4] = 0xff00 & impact_score_transmitted;
+	m_broadcast_data[5] = 0x00ff & impact_score_transmitted;
 	m_broadcast_data[6] = 0;
 	m_broadcast_data[7] = 0;
 
