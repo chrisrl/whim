@@ -87,6 +87,7 @@
 #include "fstorage_manager.h"
 #include "whim_queue.h"
 #include "algo.h"
+#include "SEGGER_RTT.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
@@ -105,7 +106,7 @@ extern uint32_t read_index;
 static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
 static float impact_data[ACCEL_FIFO_LENGTH]; // One fifo worth of analyzed data
 
-#ifdef DISPLAY_ACCEL_AXIS_DATA
+#ifdef DISPLAY_FIFO_DATA
 static char disp_string[100];// String used to display desired output data
 #endif
 
@@ -174,7 +175,11 @@ int main(void)
 	{
 		if(fifo_wtm_flag == 1)
 		{
+			ACCEL_read_int_source_reg();
+			//nrf_delay_ms(1);
+			//nrf_gpio_pin_toggle(LED_PIN);	//toggle led
 			ACCEL_read_xyz_fifo(accel_data);
+			#ifndef DISPLAY_ACCEL_GFORCE_DATA
 			impact_score = (uint16_t) ALGO_get_impact_score(accel_data, impact_data, &impact_linear_acc);
 			
 			if(impact_score > IMPACT_SCORE_THRESH_INT && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
@@ -191,35 +196,37 @@ int main(void)
 				
 			  impact_score_flag = 1;		
 			}
-			
-			#ifdef DISPLAY_FIFO_DATA
-				for (uint8_t i = 0; i < ACCEL_FIFO_LENGTH; i++)
-				{
-					#ifdef DISPLAY_ACCEL_AXIS_DATA
-						sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[i].out_x, accel_data[i].out_y, accel_data[i].out_z);
-						NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
-						NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
-					#endif
-					
-					#ifdef DISPLAY_ACCEL_GFORCE_DATA
-					NRF_LOG_INFO("G-Force Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
-					NRF_LOG_FLUSH();	
-					#endif
-					
-					#ifdef DISPLAY_IMPACT_DATA
-					//TODO throw some printy bois in here
-					if(impact_data[i] > IMPACT_THRESHOLD)
-					{
-						NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
-						NRF_LOG_FLUSH();	
-					}			
-					#endif
-				}
 			#endif
 			
-		  NRF_LOG_FLUSH();
-		}		
-		
+			#ifdef DISPLAY_FIFO_DATA
+			int count;
+			for (count = 0; count < ACCEL_FIFO_LENGTH; count++)
+			{
+				#ifdef DISPLAY_ACCEL_AXIS_DATA
+					sprintf(disp_string, "X = %.2f, Y = %.2f, Z = %.2f", accel_data[count].out_x, accel_data[count].out_y, accel_data[count].out_z);
+					NRF_LOG_INFO("%s",disp_string); // Display the interpretted accel data
+					NRF_LOG_FLUSH(); //flush often so that the buffer doesnt overflow
+				#endif
+				
+				#ifdef DISPLAY_ACCEL_GFORCE_DATA
+				sprintf(disp_string, "GF: %.2f\n", impact_data[count]);
+				SEGGER_RTT_WriteString(0, disp_string);
+				#endif
+
+				#ifdef DISPLAY_IMPACT_DATA
+				//TODO throw some printy bois in here
+				if(impact_data[count] > IMPACT_THRESHOLD)
+				{
+					NRF_LOG_INFO("Impact Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[count]));
+					NRF_LOG_FLUSH();	
+				}			
+				#endif
+			}
+			#endif
+			ACCEL_set_fifo_mode_trigger();		//reset accel to trigger mode
+		}
+		//NRF_LOG_FLUSH();
+		#ifndef DISPLAY_ACCEL_GFORCE_DATA
 		if(impact_reset_flag == 1)
 		{
 			/* Reset Impact count to 0 */
@@ -230,6 +237,7 @@ int main(void)
 			/* Reset impact reset flag */
 			impact_reset_flag = 0;
 		}
+		#endif
     nrf_pwr_mgmt_run();
 	}
 }

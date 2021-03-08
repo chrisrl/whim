@@ -38,7 +38,7 @@ and communication with the LIS2DH12 accelerometer module
 #define ACCEL_FIFO_LENGTH (32)
 #define BYTES_PER_DATA_SAMPLE (6)
 
-#define LED_PIN 22
+#define LED_PIN 23
 
 #define IMPACT_LINEAR_ACC_THRESHOLD ((float) 10) // The threshold in g's that if surpassed indicates that an impact level event has occured
 /*******************************************************************************
@@ -80,6 +80,8 @@ typedef struct {
 
 void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
 void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
-bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
+//bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
+void ACCEL_set_fifo_mode_trigger(void);
+void ACCEL_read_int_source_reg(void);
 bool ACCEL_init(void);
 #endif /*ADXL375_H*/

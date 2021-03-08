@@ -162,7 +162,8 @@ static void accel_read_block(block_command_t* cmd)
  */
 static void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
 {
-	nrf_gpio_pin_toggle(LED_PIN);	//toggle led
+	//nrf_gpio_pin_toggle(LED_PIN);	//toggle led
+	//uint8_t int_source = accel_read_register(INT_SOURCE);
 	//NRF_LOG_INFO("Watermark!");
 	fifo_wtm_flag = 1; // Set wtm_flag
 }
@@ -333,11 +334,28 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 //	return batch_flag == 1; // If batch flag == 1, an impact has been detected. Return true
 //}
 
+/**
+ * @brief Function sets the fifo mode to trigger with predefined values
+ * This function writes the neccessary values to the fifo ctl register to reset the fifo and then set it to trigger mode
+ */
+void ACCEL_set_fifo_mode_trigger(void)
+{
+	accel_write_register(FIFO_CTL, FIFO_CTL_MODE_BYPASS);						//reset fifo to bypass mode in order to enable trigger mode
+	accel_write_register(FIFO_CTL, FIFO_CTL_MODE_TRIGGER | FIFO_CTL_TRIGGER_INT1 | FIFO_CTL_SMPL4);//FIFO_CTL_SMPL2 | FIFO_CTL_SMPL0);
+}
 
 /**
+ * @brief Function to read the interrupt source register to clear interrupts
+ * This function reads the interrupt source register in order to clear interrupts
+ */
+void ACCEL_read_int_source_reg(void)
+{
+	uint8_t int_source = accel_read_register(INT_SOURCE);
+}
+	
+/**
  * @brief Function initializes the accelerometer
- * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
- * @param[in] accel_inst: accel instance
+ * This function writes the neccessary values to the desired CTRL registers to initialize the ADXL375
  */
 bool ACCEL_init(void)
 {
@@ -360,30 +378,23 @@ bool ACCEL_init(void)
 	#endif
 
 	// Begin accelerometer initialization
+	// Set Parameters
 	accel_write_register(DATA_FORMAT, DATA_FORMAT_RIGHT_JUSTIFIED);	//set data format
-	accel_write_register(BW_RATE, DATA_RATE_800HZ);									//start data rate
-	accel_write_register(INT_MAP, INT1_MAP_WTM);										//set interrupt map
+	//accel_write_register(BW_RATE, DATA_RATE_800HZ);									//start data rate
+	accel_write_register(THRESH_SHOCK, SHOCK_THRESH_19_5GS);				//set shock threshold
+	accel_write_register(SHOCK_AXES, SHOCK_AXES_ALL_ENABLED);				//set all axes to be considered for shock
+	accel_write_register(DUR, DUR_12_5MS);													//set duration to 12.5ms
 	
-	//initialize the fifo
-	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
-	//uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
-	accel_write_register(FIFO_CTL, fifo_config_w);
-
-	uint8_t fifo_config_r = accel_read_register(FIFO_CTL);
-
-	if(fifo_config_w != fifo_config_r)
-	{
-		#ifdef ACCEL_DEBUG_INFO
-		NRF_LOG_INFO("FIFO Initialization failed!");
-		#endif
-
-		return false;
-	}	
+	// Configure interrupts
+	accel_write_register(INT_MAP, INT1_MAP_SINGLE_SHOCK);						//set interrupt map
+	
+	// Initialize the fifo
+	ACCEL_set_fifo_mode_trigger();
 	
 	// Enable interrupts
-	accel_write_register(INT_ENABLE, INT_ENABLE_WTM);								//start enable watermark interrupt
+	accel_write_register(INT_ENABLE, INT_ENABLE_SINGLE_SHOCK);								//start enable watermark interrupt
 	
-	//start measuring acceleration
+	// Start measuring acceleration
 	accel_write_register(POWER_CTL, POWER_CTL_MEASURE);
 
 

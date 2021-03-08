@@ -85,6 +85,12 @@ enum {
 
 #define ADXL375_DEVICE_ID 0xE5 // ADXL375 DEVID register value.
 
+#define SHOCK_THRESH_19_5GS 0x19
+
+#define DUR_12_5MS 0x14
+
+#define SHOCK_AXES_ALL_ENABLED 0X7
+
 #define DATA_RATE_3200HZ ((uint8_t) 0x0F)
 #define DATA_RATE_1600HZ ((uint8_t) 0x0E)
 #define DATA_RATE_800HZ  ((uint8_t) 0x0D)
@@ -99,7 +105,11 @@ enum {
 #define FIFO_CTL_SMPL2  ((uint8_t) (1 << 2))
 #define FIFO_CTL_SMPL3  ((uint8_t) (1 << 3))
 #define FIFO_CTL_SMPL4  ((uint8_t) (1 << 4))
-#define FIFO_CTL_MODE0  ((uint8_t) (1 << 6))
+#define FIFO_CTL_MODE_BYPASS	((uint8_t) (0 << 7) | (0 << 6))
+#define FIFO_CTL_MODE_FIFO		((uint8_t) (0 << 7) | (1 << 6))
+#define FIFO_CTL_MODE_STREAM	((uint8_t) (1 << 7) | (0 << 6))
+#define FIFO_CTL_MODE_TRIGGER	((uint8_t) (1 << 7) | (1 << 6))
+#define FIFO_CTL_TRIGGER_INT1	((uint8_t) (0 << 5))
 
 #define FIFO_STATUS_ENT0 ((uint8_t) (1 << 0))
 #define FIFO_STATUS_ENT1 ((uint8_t) (1 << 1))
@@ -108,8 +118,10 @@ enum {
 #define FIFO_STATUS_ENT4 ((uint8_t) (1 << 4))
 #define FIFO_STATUS_ENT5 ((uint8_t) (1 << 5))
 
-#define INT_ENABLE_WTM ((uint8_t) (1 << 1))
-#define INT1_MAP_WTM ((uint8_t) (0 << 1))
+#define INT_ENABLE_WTM 					((uint8_t) (1 << 1))
+#define INT_ENABLE_SINGLE_SHOCK	0x40//((uint8_t) (1 << 6))
+#define INT1_MAP_WTM 						((uint8_t) (0 << 1))
+#define INT1_MAP_SINGLE_SHOCK		0xbf//((uint8_t) (0 << 6))
 
 #define DATA_FORMAT_RIGHT_JUSTIFIED ((uint8_t) 0x0B)
 
