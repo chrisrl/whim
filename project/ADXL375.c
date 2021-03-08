@@ -154,7 +154,6 @@ static void accel_read_block(block_command_t* cmd)
 	#endif
 }
 
-
 /**
  * @brief Event handler for INT1 watermark interrupt initializes the accelerometer
  * This function sets a flag to begin acquiring the samples from the XYZ registers once an interrupt has occured
@@ -163,6 +162,7 @@ static void accel_read_block(block_command_t* cmd)
  */
 static void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
 {
+	nrf_gpio_pin_toggle(LED_PIN);	//toggle led
 	//NRF_LOG_INFO("Watermark!");
 	fifo_wtm_flag = 1; // Set wtm_flag
 }
@@ -298,6 +298,7 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 	block_command.buffer_length = sizeof(xyz_out_registers);
 	
 
+	//CRITICAL_REGION_ENTER();
 	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
 	{
 		accel_read_block(&block_command);
@@ -310,6 +311,7 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 		data[i].out_y = SENSITIVITY_LE_800Hz * (float)y_out_temp;
 		data[i].out_z = SENSITIVITY_LE_800Hz * (float)z_out_temp;
 	}
+	//CRITICAL_REGION_EXIT();
 	fifo_wtm_flag = 0;	//reset watermark flag after reading data
 }
 
@@ -359,12 +361,12 @@ bool ACCEL_init(void)
 
 	// Begin accelerometer initialization
 	accel_write_register(DATA_FORMAT, DATA_FORMAT_RIGHT_JUSTIFIED);	//set data format
-	accel_write_register(BW_RATE, DATA_RATE_400HZ);									//start data rate
+	accel_write_register(BW_RATE, DATA_RATE_800HZ);									//start data rate
 	accel_write_register(INT_MAP, INT1_MAP_WTM);										//set interrupt map
-	accel_write_register(INT_ENABLE, INT_ENABLE_WTM);								//start enable watermark interrupt
 	
 	//initialize the fifo
-	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
+	uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
+	//uint8_t fifo_config_w = FIFO_CTL_MODE0 | FIFO_CTL_SMPL4 | FIFO_CTL_SMPL3 | FIFO_CTL_SMPL2 | FIFO_CTL_SMPL1 | FIFO_CTL_SMPL0;
 	accel_write_register(FIFO_CTL, fifo_config_w);
 
 	uint8_t fifo_config_r = accel_read_register(FIFO_CTL);
@@ -377,6 +379,9 @@ bool ACCEL_init(void)
 
 		return false;
 	}	
+	
+	// Enable interrupts
+	accel_write_register(INT_ENABLE, INT_ENABLE_WTM);								//start enable watermark interrupt
 	
 	//start measuring acceleration
 	accel_write_register(POWER_CTL, POWER_CTL_MEASURE);

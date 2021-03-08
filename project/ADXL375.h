@@ -38,6 +38,8 @@ and communication with the LIS2DH12 accelerometer module
 #define ACCEL_FIFO_LENGTH (32)
 #define BYTES_PER_DATA_SAMPLE (6)
 
+#define LED_PIN 22
+
 #define IMPACT_LINEAR_ACC_THRESHOLD ((float) 10) // The threshold in g's that if surpassed indicates that an impact level event has occured
 /*******************************************************************************
 															     TYPEDEFS

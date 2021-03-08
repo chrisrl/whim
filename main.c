@@ -91,10 +91,10 @@
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-#define DISPLAY_IMPACT_SCORE // Uncomment to display the impact score and impact count
-//#define DISPLAY_FIFO_DATA // Uncomment to use any of the options below
+//#define DISPLAY_IMPACT_SCORE // Uncomment to display the impact score and impact count
+#define DISPLAY_FIFO_DATA // Uncomment to use any of the options below
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
-//#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
+#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
 //#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
 extern volatile uint8_t fifo_wtm_flag;
@@ -143,7 +143,6 @@ static void utils_setup(void)
     APP_ERROR_CHECK(err_code);
 }
 
-
 int main(void)
 {
 	utils_setup();
@@ -167,6 +166,9 @@ int main(void)
 	
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
+	
+	nrf_gpio_cfg_output(LED_PIN);	//set led to output
+	nrf_gpio_pin_write(LED_PIN, 0);	//turn off led
 	
 	while (1)
 	{
@@ -228,7 +230,6 @@ int main(void)
 			/* Reset impact reset flag */
 			impact_reset_flag = 0;
 		}
-		
     nrf_pwr_mgmt_run();
 	}
 }
