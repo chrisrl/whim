@@ -359,7 +359,7 @@ bool ACCEL_init(void)
 
 	// Begin accelerometer initialization
 	accel_write_register(DATA_FORMAT, DATA_FORMAT_RIGHT_JUSTIFIED);	//set data format
-	accel_write_register(BW_RATE, DATA_RATE_400HZ);									//start data rate
+	accel_write_register(BW_RATE, DATA_RATE_1600HZ);									//start data rate
 	accel_write_register(INT_MAP, INT1_MAP_WTM);										//set interrupt map
 	accel_write_register(INT_ENABLE, INT_ENABLE_WTM);								//start enable watermark interrupt
 	

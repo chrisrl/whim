@@ -87,6 +87,7 @@
 #include "fstorage_manager.h"
 #include "whim_queue.h"
 #include "algo.h"
+#include "SEGGER_RTT.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
@@ -95,7 +96,8 @@
 //#define DISPLAY_FIFO_DATA // Uncomment to use any of the options below
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
 //#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
-//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
+//#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed
+//#define ALL_LOGGING_OFF
 
 extern volatile uint8_t fifo_wtm_flag;
 extern volatile uint8_t impact_reset_flag;
@@ -105,7 +107,7 @@ extern uint32_t read_index;
 static accel_xyz_data_t accel_data[ACCEL_FIFO_LENGTH]; //One fifo worth of data
 static float impact_data[ACCEL_FIFO_LENGTH]; // One fifo worth of analyzed data
 
-#ifdef DISPLAY_ACCEL_AXIS_DATA
+#ifdef DISPLAY_FIFO_DATA
 static char disp_string[100];// String used to display desired output data
 #endif
 
@@ -125,21 +127,29 @@ extern nrf_fstorage_api_t *p_fs_api; // Pointer to the fstorage instance
 static void utils_setup(void)
 {
     ret_code_t err_code = NRF_LOG_INIT(NULL);
+		#ifndef ALL_LOGGING_OFF
 		NRF_LOG_INFO("%d", err_code);
+		#endif
     APP_ERROR_CHECK(err_code);
 
     NRF_LOG_DEFAULT_BACKENDS_INIT();
 
     err_code = app_timer_init();
+		#ifndef ALL_LOGGING_OFF
 		NRF_LOG_INFO("%d", err_code);
+		#endif
     APP_ERROR_CHECK(err_code);
 
     err_code = bsp_init(BSP_INIT_LED, NULL);
+		#ifndef ALL_LOGGING_OFF
 		NRF_LOG_INFO("%d", err_code);
+		#endif
     APP_ERROR_CHECK(err_code);
 
     err_code = nrf_pwr_mgmt_init();
+		#ifndef ALL_LOGGING_OFF
 		NRF_LOG_INFO("%d", err_code);
+		#endif
     APP_ERROR_CHECK(err_code);
 }
 
@@ -148,16 +158,21 @@ int main(void)
 {
 	utils_setup();
 	
+	#ifndef ALL_LOGGING_OFF
 	NRF_LOG_INFO("----- WHIM Sensor -----");
 	NRF_LOG_FLUSH();
+	#endif
+	
 	nrf_delay_ms(100);
 	fstorage_init();
 	ANT_init();
 	
 	if(!ACCEL_init())
 	{
+		#ifndef ALL_LOGGING_OFF
 		NRF_LOG_INFO("ERROR: Accelerometer Initialization failed!");
 		NRF_LOG_FLUSH();
+		#endif
 		nrf_delay_ms(100);
 		return 0;
 	}
@@ -165,7 +180,7 @@ int main(void)
 	/* Reading stored impact value from flash */
 	fstorage_read_impact();
 	
-	NRF_LOG_FLUSH();
+	//NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
 	
 	while (1)
@@ -200,8 +215,8 @@ int main(void)
 					#endif
 					
 					#ifdef DISPLAY_ACCEL_GFORCE_DATA
-					NRF_LOG_INFO("G-Force Value: " NRF_LOG_FLOAT_MARKER, NRF_LOG_FLOAT(impact_data[i]));
-					NRF_LOG_FLUSH();	
+					sprintf(disp_string, "%.2f\n", impact_data[i]);
+					SEGGER_RTT_WriteString(0, disp_string);	
 					#endif
 					
 					#ifdef DISPLAY_IMPACT_DATA
@@ -223,7 +238,7 @@ int main(void)
 			/* Reset Impact count to 0 */
 			impact_count = 0;
 			fstorage_write_impact();
-			NRF_LOG_INFO("Impact reset.");
+			//NRF_LOG_INFO("Impact reset.");
 			
 			/* Reset impact reset flag */
 			impact_reset_flag = 0;
