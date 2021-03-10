@@ -93,11 +93,11 @@
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 #define DISPLAY_IMPACT_SCORE // Uncomment to display the impact score and impact count
-//#define DISPLAY_FIFO_DATA // Uncomment to use any of the options below
+#define DISPLAY_FIFO_DATA // Uncomment to use any of the options below
 //#define DISPLAY_ACCEL_AXIS_DATA // Uncomment if the raw accelerometer data needs to be displayed
-//#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
+#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
 //#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed
-//#define ALL_LOGGING_OFF
+#define ALL_LOGGING_OFF
 
 extern volatile uint8_t fifo_wtm_flag;
 extern volatile uint8_t impact_reset_flag;
@@ -165,7 +165,10 @@ int main(void)
 	
 	nrf_delay_ms(100);
 	fstorage_init();
+	#ifndef ALL_LOGGING_OFF
 	ANT_init();
+	#endif
+	
 	
 	if(!ACCEL_init())
 	{
@@ -193,13 +196,19 @@ int main(void)
 			if(impact_score > IMPACT_SCORE_THRESH_INT && impact_linear_acc > IMPACT_LINEAR_ACC_THRESHOLD)
 			{
 				++impact_count;
+				#ifndef DISPLAY_ACCEL_GFORCE_DATA
 			  fstorage_write_impact();
+				#endif
 				
 				#ifdef DISPLAY_IMPACT_SCORE
-					NRF_LOG_INFO("...Impact level event detected...");
-					NRF_LOG_INFO("HIC Score: %u --- Peak LA: " NRF_LOG_FLOAT_MARKER, impact_score, NRF_LOG_FLOAT(impact_linear_acc));
-					NRF_LOG_INFO("Impact Count: %d", impact_count);
-					NRF_LOG_FLUSH();
+					sprintf(disp_string, "HIC: %d\n", impact_score);
+					SEGGER_RTT_WriteString(0, disp_string);
+					sprintf(disp_string, "MLA: %.2f\n", impact_linear_acc);
+					SEGGER_RTT_WriteString(0, disp_string);
+//				NRF_LOG_INFO("...Impact level event detected...");
+//				NRF_LOG_INFO("HIC Score: %u --- Peak LA: " NRF_LOG_FLOAT_MARKER, impact_score, NRF_LOG_FLOAT(impact_linear_acc));
+//				NRF_LOG_INFO("Impact Count: %d", impact_count);
+//				NRF_LOG_FLUSH();
 			  #endif
 				
 			  impact_score_flag = 1;		
@@ -233,6 +242,7 @@ int main(void)
 		  NRF_LOG_FLUSH();
 		}		
 		
+		#ifndef DISPLAY_ACCEL_GFORCE_DATA
 		if(impact_reset_flag == 1)
 		{
 			/* Reset Impact count to 0 */
@@ -243,6 +253,7 @@ int main(void)
 			/* Reset impact reset flag */
 			impact_reset_flag = 0;
 		}
+		#endif
 		
     nrf_pwr_mgmt_run();
 	}
