@@ -70,12 +70,12 @@ static void ant_handle_transmit()
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
 	m_broadcast_data[1] = impact_count;
-	m_broadcast_data[2] = 0xff00 & impact_score_max;
+	m_broadcast_data[2] = (0xff00 & impact_score_max) >> 8;
 	m_broadcast_data[3] = 0x00ff & impact_score_max;
-	m_broadcast_data[4] = 0xff00 & impact_score_transmitted;
+	m_broadcast_data[4] = (0xff00 & impact_score_transmitted) >> 8;
 	m_broadcast_data[5] = 0x00ff & impact_score_transmitted;
-	m_broadcast_data[6] = 0;
-	m_broadcast_data[7] = 0;
+	m_broadcast_data[6] = 0xFF;
+	m_broadcast_data[7] = 0xFF;
 
 	err_code = sd_ant_broadcast_message_tx(ANT_CHANNEL_NUM,
 																				 ANT_STANDARD_DATA_PAYLOAD_SIZE,
