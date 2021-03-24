@@ -97,6 +97,14 @@
 //#define DISPLAY_ACCEL_GFORCE_DATA // Uncomment if the overall gforce data needs to be displayed
 //#define DISPLAY_IMPACT_DATA // Uncomment if the impact and magnitude data needs to be displayed 
 
+// Board Defines
+#define BAT_LOW_INPUT 2
+#define BAT_LED_PIN 23
+#define BONK_LED_PIN 24
+#define BAT_LOW 0
+#define LED_ON 1
+#define LED_OFF 0
+
 extern volatile uint8_t fifo_wtm_flag;
 extern volatile uint8_t impact_reset_flag;
 extern uint8_t impact_score_flag;
@@ -136,18 +144,20 @@ static void utils_setup(void)
 		NRF_LOG_INFO("%d", err_code);
     APP_ERROR_CHECK(err_code);
 
-    err_code = bsp_init(BSP_INIT_LED, NULL);
-		NRF_LOG_INFO("%d", err_code);
-    APP_ERROR_CHECK(err_code);
+		// LED and Battery Indicator GPIO Initializations
+		nrf_gpio_cfg_input(BAT_LOW_INPUT, NRF_GPIO_PIN_PULLUP);	// Configure battery indicator as input
+		nrf_gpio_cfg_output(BAT_LED_PIN);	//set led to output
+		nrf_gpio_pin_write(BAT_LED_PIN, 0);	//turn off led
+		nrf_gpio_cfg_output(BONK_LED_PIN);	//set led to output
+		nrf_gpio_pin_write(BONK_LED_PIN, 0);	//turn off led
+//    err_code = bsp_init(BSP_INIT_LED, NULL);
+//		NRF_LOG_INFO("%d", err_code);
+//    APP_ERROR_CHECK(err_code);
 
     err_code = nrf_pwr_mgmt_init();
 		NRF_LOG_INFO("%d", err_code);
     APP_ERROR_CHECK(err_code);
 }
-
-#define BAT_LOW_PIN 2
-#define BAT_LED_PIN 23
-#define BONK_LED_PIN 24
 
 int main(void)
 {
@@ -172,12 +182,6 @@ int main(void)
 	
 	NRF_LOG_FLUSH();
 	nrf_delay_ms(100);
-	
-	nrf_gpio_cfg_input(BAT_LOW_PIN, NRF_GPIO_PIN_PULLUP);	// Configure battery indicator as input
-	nrf_gpio_cfg_output(BAT_LED_PIN);	//set led to output
-	nrf_gpio_pin_write(BAT_LED_PIN, 0);	//turn off led
-	nrf_gpio_cfg_output(BONK_LED_PIN);	//set led to output
-	nrf_gpio_pin_write(BONK_LED_PIN, 0);	//turn off led
 	
 	while (1)
 	{
@@ -249,11 +253,15 @@ int main(void)
 			/* Reset impact reset flag */
 			impact_reset_flag = 0;
 		}
-		if(nrf_gpio_pin_read(BAT_LOW_PIN) == 0){
-			nrf_gpio_pin_write(BAT_LED_PIN, 1);	//turn off led
+		
+		// Battery Low LED Indicator
+		if(nrf_gpio_pin_read(BAT_LOW_INPUT) == BAT_LOW){
+			if(nrf_gpio_pin_out_read(BAT_LED_PIN) == LED_OFF)	// If LED off
+				nrf_gpio_pin_write(BAT_LED_PIN, LED_ON);	// Turn on led
 		}
 		else{
-			nrf_gpio_pin_write(BAT_LED_PIN, 0);	//turn off led
+			if(nrf_gpio_pin_out_read(BAT_LED_PIN) == LED_ON)	// If LED on
+				nrf_gpio_pin_write(BAT_LED_PIN, LED_OFF);	// Turn off led
 		}
 		
     nrf_pwr_mgmt_run();
