@@ -64,9 +64,7 @@ typedef struct {
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-adxl375_instance_t accel_inst = {0}; // Instance of the LIS2DH12
-
-/*NOTE: Uncomment these lines for more debug info*/
+/* NOTE: Uncomment these lines for more debug info */
 //#define SPI_DEBUG_INFO
 //#define ACCEL_DEBUG_INFO
 
@@ -81,9 +79,9 @@ uint8_t m_rx_buf[SPI_BUFFER_LENGTH]; //Rx buffer
 static register_command_t reg_command = {0};
 static block_command_t block_command = {0};
 
-volatile uint8_t fifo_wtm_flag = 0;
-uint32_t read_index = 0;
+adxl375_instance_t accel_inst = {0}; // Instance of the LIS2DH12
 
+volatile uint8_t fifo_wtm_flag = 0;
 /*******************************************************************************
 															    PROCEDURES
 *******************************************************************************/
@@ -163,7 +161,6 @@ static void accel_read_block(block_command_t* cmd)
  */
 static void accel_wtm_event_handler(nrf_drv_gpiote_pin_t pin, nrf_gpiote_polarity_t polarity)
 {
-	//NRF_LOG_INFO("Watermark!");
 	fifo_wtm_flag = 1; // Set wtm_flag
 }
 
@@ -251,35 +248,6 @@ static void spi_init(void)
 }
 
 /**
- * @brief Function reads X Y Z data from the accelerometer
- * Get the X Y Z OUT register values and convert them to their readable floating point representations
- * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
- * @param[in] accel_inst: pointer to the lis2dh12 instance variable
- */
-void ACCEL_read_xyz(accel_xyz_data_t* data)
-{
-	#ifdef ACCEL_DEBUG_INFO
-	NRF_LOG_INFO("Reading accel XYZ data registers...");
-	#endif
-	
-	accel_xyz_out_t xyz_out_registers = {0};
-	
-	block_command.start_address = DATAX0;
-	block_command.buffer = (uint8_t*)&xyz_out_registers;
-	block_command.buffer_length = sizeof(xyz_out_registers);
-	
-	accel_read_block(&block_command);
-	
-	int16_t x_out_temp = (((int16_t)xyz_out_registers.OUT_X_H << 8) | ((int16_t)xyz_out_registers.OUT_X_L << 0));
-	int16_t y_out_temp = (((int16_t)xyz_out_registers.OUT_Y_H << 8) | ((int16_t)xyz_out_registers.OUT_Y_L << 0));
-	int16_t z_out_temp = (((int16_t)xyz_out_registers.OUT_Z_H << 8) | ((int16_t)xyz_out_registers.OUT_Z_L << 0));
-	
-	data->out_x = SENSITIVITY_LE_800Hz * (float)x_out_temp;
-	data->out_y = SENSITIVITY_LE_800Hz * (float)y_out_temp;
-	data->out_z = SENSITIVITY_LE_800Hz * (float)z_out_temp;
-}
-
-/**
  * @brief Function reads all X Y Z data from the accelerometer fifo buffer
  * Get the X Y Z OUT register values and convert them to their readable floating point representations
  * @param[in] data: accel_xyz_data_t pointer to receive the x y and z values
@@ -313,25 +281,6 @@ void ACCEL_read_xyz_fifo(accel_xyz_data_t data[])
 	fifo_wtm_flag = 0;	//reset watermark flag after reading data
 }
 
-
-//bool ACCEL_analyze_xyz(accel_xyz_data_t data_in[], float impact_data[])
-//{
-//	uint8_t batch_flag = 0; // This flag is used to indicate whether an impact has been detected in this batch of data
-//	
-//	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
-//	{
-//		impact_data[i] = sqrt(pow(data_in[i].out_x, 2) + pow(data_in[i].out_y,2) + pow(data_in[i].out_z,2)); // Take the magnitude of a single XYZ sample
-//		
-//		if(impact_data[i] > IMPACT_LINEAR_ACC_THRESHOLD)
-//		{
-//			batch_flag = 1;
-//		}
-//	}
-//	
-//	return batch_flag == 1; // If batch flag == 1, an impact has been detected. Return true
-//}
-
-
 /**
  * @brief Function initializes the accelerometer
  * This function writes the neccessary values to the desired CTRL registers to initialize the LIS2DH12
@@ -349,7 +298,7 @@ bool ACCEL_init(void)
 		return false;
 	}
 
-	accel_pin_int_init(); // Not sure if we would like to throw some debug capabilities around this
+	accel_pin_int_init();
 
 	nrf_delay_ms(100);
 

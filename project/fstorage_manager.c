@@ -25,9 +25,10 @@ Flash Storage (fstorage).
 //#define DISPLAY_FSTORAGE_INFO // Uncomment if the fstorage info needs to be displayed
 
 nrf_fstorage_api_t *p_fs_api;
-extern volatile uint8_t impact_count;
-extern volatile uint16_t impact_score_transmitted;
-extern volatile uint16_t impact_score_max;
+
+extern uint8_t impact_count; // Variable to hold the overall impact count of this device
+extern uint16_t impact_score_latest; // Variable to hold the most recent HIC impact score that is transmitted
+extern uint16_t impact_score_max; // Variable to hold the largest HIC
 /*******************************************************************************
 															      PROCEDURES
 *******************************************************************************/
@@ -42,37 +43,37 @@ NRF_FSTORAGE_DEF(nrf_fstorage_t fstorage) =
      * You must set these manually, even at runtime, before nrf_fstorage_init() is called.
      * The function nrf5_flash_end_addr_get() can be used to retrieve the last address on the
      * last page of flash available to write data. */
-    .start_addr = 0x7d000,
+    .start_addr = 0x7D000,
     .end_addr   = 0x80000,
 };
 
 static void fstorage_evt_handler(nrf_fstorage_evt_t * p_evt)
 {
 	#ifdef DISPLAY_FSTORAGE_INFO
-    if (p_evt->result != NRF_SUCCESS)
-    {
-        NRF_LOG_INFO("--> Event received: ERROR while executing an fstorage operation.");
-        return;
-    }
+	if (p_evt->result != NRF_SUCCESS)
+	{
+			NRF_LOG_INFO("--> Event received: ERROR while executing an fstorage operation.");
+	}
 
-    switch (p_evt->id)
-    {
-        case NRF_FSTORAGE_EVT_WRITE_RESULT:
-        {
-            NRF_LOG_INFO("--> Event received: wrote %d bytes at address 0x%x.",
-                         p_evt->len, p_evt->addr);
-        } break;
+	switch (p_evt->id)
+	{
+			case NRF_FSTORAGE_EVT_WRITE_RESULT:
+			{
+					NRF_LOG_INFO("--> Event received: wrote %d bytes at address 0x%x.",
+											 p_evt->len, p_evt->addr);
+			} break;
 
-        case NRF_FSTORAGE_EVT_ERASE_RESULT:
-        {
-            NRF_LOG_INFO("--> Event received: erased %d page from address 0x%x.",
-                         p_evt->len, p_evt->addr);
-        } break;
+			case NRF_FSTORAGE_EVT_ERASE_RESULT:
+			{
+					NRF_LOG_INFO("--> Event received: erased %d page from address 0x%x.",
+											 p_evt->len, p_evt->addr);
+			} break;
 
-        default:
-            break;
-    }
+			default:
+					break;
+	}
 	#endif
+	APP_ERROR_CHECK(p_evt->result); // terminate program if error is encountered
 }
 
 /**
@@ -138,7 +139,7 @@ void fstorage_write_impact(void)
 	wait_for_flash_ready(&fstorage);
 		
 	/* Copy impact_score to meet program size requirements */
-	store_data = impact_score_transmitted;
+	store_data = impact_score_latest;
 	
 	rc = nrf_fstorage_write(&fstorage, 0x7e000, &store_data, sizeof(store_data), NULL);
 	APP_ERROR_CHECK(rc);
@@ -172,7 +173,7 @@ void fstorage_read_impact(void)
 	rc = nrf_fstorage_read(&fstorage, 0x7e000, (void *)&read_data, sizeof(read_data));
 	APP_ERROR_CHECK(rc);
 	
-	impact_score_transmitted = read_data;
+	impact_score_latest = read_data;
 	
 	rc = nrf_fstorage_read(&fstorage, 0x7f000, (void *)&read_data, sizeof(read_data));
 	APP_ERROR_CHECK(rc);

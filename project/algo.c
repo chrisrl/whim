@@ -24,7 +24,7 @@ the severity of impact experience by a wearer of the WHIM device
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
-#define ALGO_DEBUG
+//#define ALGO_DEBUG
 
 WHIM_QUEUE_DEF(algo_queue, QUEUE_CAPACITY, WHIM_QUEUE_MODE_OVERFLOW); // Global queue for impact data
 
@@ -38,7 +38,7 @@ uint8_t impact_score_flag = 0;
  * @brief Function determines the linear magnitudes of the x,y,z acceleration samples
  * @param[in] data_in Pointer to the data struct whose magnitude is being determined
  */
-static void algo_get_linear_mag(accel_xyz_data_t data_in[], float impact_mag_data[])
+static void algo_get_linear_magnitude(accel_xyz_data_t data_in[], float impact_mag_data[])
 {
 	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
 	{
@@ -57,7 +57,7 @@ float ALGO_get_impact_score(accel_xyz_data_t data_in[], float impact_mag_data[],
 	float max_score = 0;
 	float peak_linear_acc = 0;
 	
-	algo_get_linear_mag(data_in, impact_mag_data); // Populate the impact_mag_data array with the most current linear acceleration magnitudes
+	algo_get_linear_magnitude(data_in, impact_mag_data); // Populate the impact_mag_data array with the most current linear acceleration magnitudes
 	
 	for(int i = 0; i < ACCEL_FIFO_LENGTH; i++)
 	{

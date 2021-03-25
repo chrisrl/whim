@@ -38,22 +38,19 @@ and communicating over ANT wireless protocol
 *******************************************************************************/
 
 /*NOTE: Uncomment these lines for more debug info*/
-#define ANT_DEBUG_INFO
+//#define ANT_DEBUG_INFO
 
 #define DIGITALIO_DATA_PID              1u                      /**< Page number: digital data. */
 #define APP_ANT_OBSERVER_PRIO           1                       /**< Application's ANT observer priority. You shouldn't need to modify this value. */
 #define RESET_IMPACT_COUNT							0x10										
 
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
-//static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
 
 volatile uint8_t impact_reset_flag = 0;
 
-extern volatile uint8_t impact_count; // Variable to hold the overall impact count of this device
-extern volatile uint16_t impact_score ; // Variable to hold the most recent HIC impact score
-extern volatile uint16_t impact_score_transmitted; 
-extern volatile uint16_t impact_score_max; // Variable to hold the largest HIC
-extern nrf_fstorage_t* p_fs_api; // Pointer to the fstorage instance
+extern uint8_t impact_count; // Variable to hold the overall impact count of this device
+extern uint16_t impact_score_latest; // Variable to hold the most recent HIC impact score that is transmitted
+extern uint16_t impact_score_max; // Variable to hold the largest HIC
 /*******************************************************************************
 															    PROCEDURES
 *******************************************************************************/
@@ -70,10 +67,10 @@ static void ant_handle_transmit()
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
 	m_broadcast_data[1] = impact_count;
-	m_broadcast_data[2] = (0xff00 & impact_score_max) >> 8;
-	m_broadcast_data[3] = 0x00ff & impact_score_max;
-	m_broadcast_data[4] = (0xff00 & impact_score_transmitted) >> 8;
-	m_broadcast_data[5] = 0x00ff & impact_score_transmitted;
+	m_broadcast_data[2] = (0xFF00 & impact_score_max) >> 8;
+	m_broadcast_data[3] = 0x00FF & impact_score_max;
+	m_broadcast_data[4] = (0xFF00 & impact_score_latest) >> 8;
+	m_broadcast_data[5] = 0x00FF & impact_score_latest;
 	m_broadcast_data[6] = 0xFF;
 	m_broadcast_data[7] = 0xFF;
 
