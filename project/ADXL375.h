@@ -6,15 +6,15 @@ and communication with the LIS2DH12 accelerometer module
 
 ******************************************************************************/
 
-#ifndef LIS2DH12_H //Guard statement
-#define LIS2DH12_H
+#ifndef ADXL375_H //Guard statement
+#define ADXL375_H
 
 /*******************************************************************************
 															GENERAL INCLUDES
 *******************************************************************************/
 
 #include "boards.h"
-#include "LIS2DH12_registers.h"
+#include "ADXL375_registers.h"
 #include "nrf_drv_gpiote.h"
 
 /*******************************************************************************
@@ -25,10 +25,11 @@ and communication with the LIS2DH12 accelerometer module
 
 // This value represents the measurement sensitivity of the accelerometer device's X, Y, and Z registers.
 // The value is determined based on the resolution and operating mode that the device is set to in its initialization function.
-// The unit of the variable is in g/digit, where digit is the two's compliment value output by the X, Y, and Z registers.
-// More information on the sensitivity of the accelerometer device can be found in Table 4. of the device datasheet.
-// https://www.st.com/content/ccc/resource/technical/document/datasheet/12/c0/5c/36/b9/58/46/f2/DM00091513.pdf/files/DM00091513.pdf/jcr:content/translations/en.DM00091513.pdf
-#define SENSITIVITY ((float) 0.048)
+// The unit of the variable is in g/LSB, where digit is the two's compliment value output by the X, Y, and Z registers.
+// More information on the sensitivity of the accelerometer device can be found in Table 1. of the device datasheet.
+// https://www.analog.com/media/en/technical-documentation/data-sheets/ADXL375.pdf
+#define SENSITIVITY_LE_800Hz ((float) 0.049)
+#define SENSITIVITY_GE_1600Hz ((float) 0.098)
 
 // This value represents the number of bits that the xyz data are stored in. I.e, when the X_OUT_L & X_OUT_H registers are concatenated, they are stored in a uint16_t variable.
 // Therefore 16 bits is used to store a value read from any of the X, Y, and Z  registers
@@ -37,7 +38,7 @@ and communication with the LIS2DH12 accelerometer module
 #define ACCEL_FIFO_LENGTH (32)
 #define BYTES_PER_DATA_SAMPLE (6)
 
-#define IMPACT_THRESHOLD ((float) 2) // The threshold in g's that if surpassed indicates that an impact level event has occured
+#define IMPACT_LINEAR_ACC_THRESHOLD ((float) 100) // The threshold in g's that if surpassed indicates that an impact level event has occured
 /*******************************************************************************
 															     TYPEDEFS
 *******************************************************************************/
@@ -46,11 +47,6 @@ typedef struct {
 	float out_y;
 	float out_z;
 } accel_xyz_data_t;
-
-//typedef struct {
-//	float accel_magnitude;
-//	bool	impact_event;
-//} impact_data_t;
 
 enum {
 	SCALE_2G = 2,
@@ -72,19 +68,15 @@ enum {
 };
 
 typedef struct {
-	lis2dh12_reg_map_t reg_map;
+	adxl375_reg_map_t reg_map;
 	resolution_mode_t resolution;
-} lis2dh12_instance_t;
+} adxl375_instance_t;
 	
 /*******************************************************************************
 															   PROCEDURES
 *******************************************************************************/
 
-void ACCEL_read_xyz(accel_xyz_data_t* xyz_data);
 void ACCEL_read_xyz_fifo(accel_xyz_data_t data[]);
 bool ACCEL_analyze_xyz(accel_xyz_data_t data[], float impact_data[]);
 bool ACCEL_init(void);
-bool ACCEL_fifo_init(void);
-void ACCEL_pwrdn(void);
-
-#endif /*LIS2DH12_H*/
+#endif /*ADXL375_H*/

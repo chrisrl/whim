@@ -276,7 +276,7 @@
               <OCR_RVCT4>
                 <Type>1</Type>
                 <StartAddress>0x12000</StartAddress>
-                <Size>0x6e000</Size>
+                <Size>0x6d000</Size>
               </OCR_RVCT4>
               <OCR_RVCT5>
                 <Type>1</Type>
@@ -339,7 +339,7 @@
               <MiscControls>--reduce_paths</MiscControls>
               <Define>ANT_STACK_SUPPORT_REQD BOARD_D52DK1 FLOAT_ABI_HARD NRF52 NRF52832_XXAA NRF52_PAN_74 S212 SOFTDEVICE_PRESENT SWI_DISABLE0</Define>
               <Undefine></Undefine>
-              <IncludePath>..\config;..\..\components;..\..\components\ant\ant_channel_config;..\..\components\ant\ant_search_config;..\..\components\boards;..\..\components\drivers_nrf\common;..\..\components\drivers_nrf\delay;..\..\components\drivers_nrf\gpiote;..\..\components\drivers_nrf\hal;..\..\components\drivers_nrf\spi_master;..\..\components\drivers_nrf\uart;..\..\components\libraries\atomic;..\..\components\libraries\balloc;..\..\components\libraries\bsp;..\..\components\libraries\button;..\..\components\libraries\experimental_log;..\..\components\libraries\experimental_log\src;..\..\components\libraries\experimental_memobj;..\..\components\libraries\experimental_section_vars;..\..\components\libraries\hardfault;..\..\components\libraries\hardfault\nrf52;..\..\components\libraries\mutex;..\..\components\libraries\pwr_mgmt;..\..\components\libraries\scheduler;..\..\components\libraries\strerror;..\..\components\libraries\timer;..\..\components\libraries\util;..\..\components\softdevice\common;..\..\components\softdevice\s212\headers;..\..\components\softdevice\s212\headers\nrf52;..\..\components\toolchain;..\..\..;..\..\external\fprintf;..\..\external\segger_rtt;..\project</IncludePath>
+              <IncludePath>..\config;..\..\components;..\..\components\ant\ant_channel_config;..\..\components\ant\ant_search_config;..\..\components\boards;..\..\components\drivers_nrf\common;..\..\components\drivers_nrf\delay;..\..\components\drivers_nrf\gpiote;..\..\components\drivers_nrf\hal;..\..\components\drivers_nrf\spi_master;..\..\components\drivers_nrf\uart;..\..\components\libraries\atomic;..\..\components\libraries\balloc;..\..\components\libraries\bsp;..\..\components\libraries\button;..\..\components\libraries\experimental_log;..\..\components\libraries\experimental_log\src;..\..\components\libraries\experimental_memobj;..\..\components\libraries\experimental_section_vars;..\..\components\libraries\hardfault;..\..\components\libraries\hardfault\nrf52;..\..\components\libraries\fstorage;..\..\components\libraries\mutex;..\..\components\libraries\pwr_mgmt;..\..\components\libraries\scheduler;..\..\components\libraries\strerror;..\..\components\libraries\timer;..\..\components\libraries\util;..\..\components\libraries\atomic_fifo;..\..\components\softdevice\common;..\..\components\softdevice\s212\headers;..\..\components\softdevice\s212\headers\nrf52;..\..\components\toolchain;..\..\..;..\..\external\fprintf;..\..\external\segger_rtt;..\project;..\..\components\libraries\queue</IncludePath>
             </VariousControls>
           </Cads>
           <Aads>
@@ -384,19 +384,19 @@
           <GroupName>Accel</GroupName>
           <Files>
             <File>
-              <FileName>LIS2DH12.c</FileName>
+              <FileName>ADXL375.c</FileName>
               <FileType>1</FileType>
-              <FilePath>.\LIS2DH12.c</FilePath>
+              <FilePath>.\ADXL375.c</FilePath>
             </File>
             <File>
-              <FileName>LIS2DH12.h</FileName>
+              <FileName>ADXL375.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\LIS2DH12.h</FilePath>
+              <FilePath>.\ADXL375.h</FilePath>
             </File>
             <File>
-              <FileName>LIS2DH12_registers.h</FileName>
+              <FileName>ADXL375_registers.h</FileName>
               <FileType>5</FileType>
-              <FilePath>.\LIS2DH12_registers.h</FilePath>
+              <FilePath>.\ADXL375_registers.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -427,6 +427,31 @@
               <FileName>sdk_config.h</FileName>
               <FileType>5</FileType>
               <FilePath>..\config\sdk_config.h</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>Algo</GroupName>
+          <Files>
+            <File>
+              <FileName>algo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\algo.c</FilePath>
+            </File>
+            <File>
+              <FileName>algo.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\algo.h</FilePath>
+            </File>
+            <File>
+              <FileName>whim_queue.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\whim_queue.c</FilePath>
+            </File>
+            <File>
+              <FileName>whim_queue.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\whim_queue.h</FilePath>
             </File>
           </Files>
         </Group>
@@ -578,6 +603,21 @@
               <FileType>1</FileType>
               <FilePath>..\..\components\libraries\strerror\nrf_strerror.c</FilePath>
             </File>
+            <File>
+              <FileName>nrf_fstorage.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\components\libraries\fstorage\nrf_fstorage.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_fstorage_sd.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\components\libraries\fstorage\nrf_fstorage_sd.c</FilePath>
+            </File>
+            <File>
+              <FileName>nrf_atfifo.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\..\components\libraries\atomic_fifo\nrf_atfifo.c</FilePath>
+            </File>
           </Files>
         </Group>
         <Group>
@@ -652,6 +692,21 @@
               <FileName>nrf_sdh_soc.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\..\components\softdevice\common\nrf_sdh_soc.c</FilePath>
+            </File>
+          </Files>
+        </Group>
+        <Group>
+          <GroupName>flash_fstorage</GroupName>
+          <Files>
+            <File>
+              <FileName>fstorage_manager.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>.\fstorage_manager.c</FilePath>
+            </File>
+            <File>
+              <FileName>fstorage_manager.h</FileName>
+              <FileType>5</FileType>
+              <FilePath>.\fstorage_manager.h</FilePath>
             </File>
           </Files>
         </Group>

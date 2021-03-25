@@ -23,29 +23,34 @@ and communicating over ANT wireless protocol
 #include "nrf_soc.h"
 #include "nrf_sdh.h"
 #include "nrf_sdh_ant.h"
+#include "nrf_fstorage.h"
+#include "nrf_fstorage_sd.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
 #include "nrf_log_default_backends.h"
 
-#include "LIS2DH12.h"
+#include "ADXL375.h"
+#include "fstorage_manager.h"
 
 /*******************************************************************************
 															VARIABLES AND CONSTANTS
 *******************************************************************************/
 
 /*NOTE: Uncomment these lines for more debug info*/
-#define ANT_DEBUG_INFO
+//#define ANT_DEBUG_INFO
 
 #define DIGITALIO_DATA_PID              1u                      /**< Page number: digital data. */
 #define APP_ANT_OBSERVER_PRIO           1                       /**< Application's ANT observer priority. You shouldn't need to modify this value. */
+#define RESET_IMPACT_COUNT							0x10										
 
 static uint8_t m_broadcast_data[ANT_STANDARD_DATA_PAYLOAD_SIZE];    /**< Primary data transmit buffer. */
-static uint8_t m_tx_input_pin_state = 0;                         /**< State of digital inputs in this node, for transmission. */
 
-extern volatile uint8_t impact_count; // Variable to hold the overall impact count of this device
+volatile uint8_t impact_reset_flag = 0;
 
-
+extern uint8_t impact_count; // Variable to hold the overall impact count of this device
+extern uint16_t impact_score_latest; // Variable to hold the most recent HIC impact score that is transmitted
+extern uint16_t impact_score_max; // Variable to hold the largest HIC
 /*******************************************************************************
 															    PROCEDURES
 *******************************************************************************/
@@ -62,12 +67,12 @@ static void ant_handle_transmit()
 
 	m_broadcast_data[0] = DIGITALIO_DATA_PID;
 	m_broadcast_data[1] = impact_count;
-	m_broadcast_data[2] = 0;
-	m_broadcast_data[3] = 0;
-	m_broadcast_data[4] = 0;
-	m_broadcast_data[5] = 0;
-	m_broadcast_data[6] = 0;
-	m_broadcast_data[7] = 0;
+	m_broadcast_data[2] = (0xFF00 & impact_score_max) >> 8;
+	m_broadcast_data[3] = 0x00FF & impact_score_max;
+	m_broadcast_data[4] = (0xFF00 & impact_score_latest) >> 8;
+	m_broadcast_data[5] = 0x00FF & impact_score_latest;
+	m_broadcast_data[6] = 0xFF;
+	m_broadcast_data[7] = 0xFF;
 
 	err_code = sd_ant_broadcast_message_tx(ANT_CHANNEL_NUM,
 																				 ANT_STANDARD_DATA_PAYLOAD_SIZE,
@@ -75,6 +80,16 @@ static void ant_handle_transmit()
 	APP_ERROR_CHECK(err_code);
 }
 
+/**@brief Function to handle reset event
+ * This function handles the RESET_IMPACT_COUNT event and sets impact count to 0.
+ */
+static void ant_handle_receieve(ant_evt_t * p_ant_evt) 
+{
+	if(p_ant_evt->message.ANT_MESSAGE_aucPayload[0] == RESET_IMPACT_COUNT) 
+	{
+		impact_reset_flag = 1;
+	}
+}
 
 /**@brief Function for ANT stack initialization.
  */
@@ -129,7 +144,7 @@ void ANT_init(void)
 	APP_ERROR_CHECK(err_code);
 	
 	#ifdef ANT_DEBUG_INFO
-	NRF_LOG_INFO("ANT channel ");
+	NRF_LOG_INFO("ANT channel Opened.");
 	#endif
 }
 
@@ -144,7 +159,7 @@ static void ant_evt_handler(ant_evt_t * p_ant_evt, void * p_context)
 	{
 		case EVENT_RX:
 			NRF_LOG_INFO("RX");
-		//TODO: Handle a received message
+			ant_handle_receieve(p_ant_evt);
 			break;
 
 		case EVENT_TX:

@@ -89,7 +89,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI_SCK_PIN
-#define SPI_SCK_PIN 30
+#define SPI_SCK_PIN 15
 #endif
 
 // <o> SPI_MISO_PIN  - Pin number
@@ -129,7 +129,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI_MISO_PIN
-#define SPI_MISO_PIN 28
+#define SPI_MISO_PIN 13
 #endif
 
 // <o> SPI_MOSI_PIN  - Pin number
@@ -169,7 +169,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI_MOSI_PIN
-#define SPI_MOSI_PIN 29
+#define SPI_MOSI_PIN 14
 #endif
 
 // <o> SPI_SS_PIN  - Pin number
@@ -209,7 +209,7 @@
 // <4294967295=> Not connected 
 
 #ifndef SPI_SS_PIN
-#define SPI_SS_PIN 27
+#define SPI_SS_PIN 16
 #endif
 
 // <o> SPI_IRQ_PRIORITY  - Interrupt priority
@@ -733,6 +733,45 @@
 #ifndef NRF_FPRINTF_ENABLED
 #define NRF_FPRINTF_ENABLED 1
 #endif
+
+// <e> NRF_FSTORAGE_ENABLED - nrf_fstorage - Flash abstraction library
+//==========================================================
+#ifndef NRF_FSTORAGE_ENABLED
+#define NRF_FSTORAGE_ENABLED 1
+#endif
+// <h> nrf_fstorage_sd - Implementation using the SoftDevice.
+
+// <i> Configuration options for the fstorage implementation using the SoftDevice.
+//==========================================================
+// <o> NRF_FSTORAGE_SD_QUEUE_SIZE - Size of the internal queue of operations. 
+// <i> Increase this value if API calls frequently return the error @ref NRF_ERROR_NO_MEM.
+
+#ifndef NRF_FSTORAGE_SD_QUEUE_SIZE
+#define NRF_FSTORAGE_SD_QUEUE_SIZE 4
+#endif
+
+// <o> NRF_FSTORAGE_SD_MAX_RETRIES - Maximum number of attempts at executing an operation when the SoftDevice is busy. 
+// <i> Increase this value if events frequently return the @ref NRF_ERROR_TIMEOUT error.
+// <i> The SoftDevice might fail to schedule flash access due to high BLE activity.
+
+#ifndef NRF_FSTORAGE_SD_MAX_RETRIES
+#define NRF_FSTORAGE_SD_MAX_RETRIES 8
+#endif
+
+// <o> NRF_FSTORAGE_SD_MAX_WRITE_SIZE - Maximum number of bytes to be written to flash in a single operation. 
+// <i> This value must be a multiple of four.
+// <i> Lowering this value can increase the chances of the SoftDevice being able to execute flash operations in between radio activity.
+// <i> This value is bound by the maximum number of bytes that can be written to flash in a single call to @ref sd_flash_write.
+// <i> That is 1024 bytes for nRF51 ICs and 4096 bytes for nRF52 ICs.
+
+#ifndef NRF_FSTORAGE_SD_MAX_WRITE_SIZE
+#define NRF_FSTORAGE_SD_MAX_WRITE_SIZE 4096
+#endif
+
+// </h> 
+//==========================================================
+
+// </e>
 
 // <q> NRF_MEMOBJ_ENABLED  - nrf_memobj - Linked memory allocator module
  
